@@ -1,0 +1,9 @@
+role;token-validate;project-board-read;project-board-write;issue-create;issue-progress;wiki-read;wiki-write;pr-create;pr-comment
+agile-coach;yes;yes;yes;yes;no;yes;yes;no;no
+generic-deliver;yes;yes;no;no;yes;no;no;yes;yes
+fullstack-engineer;yes;yes;no;no;yes;no;no;yes;yes
+ux-designer;yes;yes;no;no;yes;no;no;yes;no
+data-scientist;yes;yes;no;no;yes;no;no;yes;no
+pullrequest-reviewer;yes;yes;no;no;no;no;no;no;yes
+generic-review;yes;yes;no;no;no;yes;no;no;yes
+platform-architect;yes;yes;no;no;no;yes;yes;no;no

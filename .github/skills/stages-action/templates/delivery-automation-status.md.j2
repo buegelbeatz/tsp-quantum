@@ -1,0 +1,33 @@
+# Delivery Automation Status ({{ stage }})
+
+> **Purpose:** Machine-generated dispatch and readiness record.
+> Shows what automation has done. For human review gate status see `delivery-review-status.md`.
+
+- generated_at: {{ generated_at }}
+- stage: {{ stage }}
+- automation_step: {{ automation_step }}
+- status: {{ status }}
+
+## Task Activity
+
+| Task ID | Assignee | Status | Branch | Activity Summary |
+|---------|----------|--------|--------|-----------------|
+{% for t in tasks %}
+| {{ t.task_id }} | {{ t.assignee }} | ![{{ t.status }}](badges/{{ t.status }}) `{{ t.status }}` | `{{ t.branch }}` | {{ t.activity_summary }} |
+{% endfor %}
+
+## Dispatch Summary
+
+| Metric | Value |
+|--------|-------|
+| triggered_tasks | {{ triggered_tasks }} |
+| already_done_handoffs | {{ already_done_handoffs }} |
+| total_tasks_and_bugs | {{ total_tasks_and_bugs }} |
+| ready | {{ ready }} |
+| blocked | {{ blocked }} |
+
+## Board Sync Notes
+
+{% for note in board_sync_notes %}
+- {{ note }}
+{% endfor %}

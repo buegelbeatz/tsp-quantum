@@ -1,0 +1,13 @@
+version: "1"
+layer: digital-generic-team
+stages:
+  - stage_id: "00"
+    command: exploration
+    title: Exploration
+    description: "Enterprise Specification: Exploration State Machine"
+    source_layer: digital-generic-team
+  - stage_id: "05"
+    command: project
+    title: Project
+    description: "Enterprise Specification: Project Stage"
+    source_layer: digital-generic-team

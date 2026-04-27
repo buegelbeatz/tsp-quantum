@@ -1,0 +1,8 @@
+layer: digital-generic-team
+schema: github_operation_result_v1
+status: ok
+operation: {{operation}}
+resource: {{resource}}
+details:
+  id: {{id}}
+  url: {{url}}

@@ -1,0 +1,19 @@
+layer: digital-generic-team
+schema: expert_request_v1
+request_id: "{{request_id}}"
+from_role: "{{from_role}}"
+to_role: "{{to_role}}"
+goal: "{{goal}}"
+current_state:
+  summary: "{{current_state_summary}}"
+context:
+  - "{{context_item}}"
+constraints:
+  - "{{constraint_item}}"
+assumptions:
+  - "{{assumption_item}}"
+open_questions:
+  - "{{question_item}}"
+artifacts:
+  - "{{artifact_path}}"
+due_by: "{{due_by_iso8601}}"

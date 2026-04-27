@@ -1,0 +1,5 @@
+# Test and lint runtime dependencies for the shared layer venv.
+pytest
+pytest-cov
+coverage
+ruff

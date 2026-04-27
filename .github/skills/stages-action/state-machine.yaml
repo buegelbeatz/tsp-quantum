@@ -1,0 +1,32 @@
+layer: digital-generic-team
+version: "1"
+command: "/stages-action"
+runtime_model:
+  canonical_flow:
+    - step: "1/6"
+      action: "ingest-input-to-data"
+    - step: "2/6"
+      action: "specification-synthesis"
+    - step: "3/6"
+      action: "stage-readiness-gate"
+    - step: "4/6"
+      action: "planning-synchronization"
+    - step: "5/6"
+      action: "delivery-dispatch"
+      when: "ready_for_planning=true and DRY_RUN not in {1,2}"
+    - step: "6/6"
+      action: "review-status"
+      when: "ready_for_planning=true and DRY_RUN not in {1,2}"
+  observability_fields:
+    - "ready_for_planning"
+    - "gate_reason"
+    - "selected_bundle_count"
+    - "blocked_bundle_count"
+    - "blocked_bundle_ids"
+    - "delivery_automation_status"
+  diagnostics_artifact: ".digital-artifacts/60-review/<date>/<stage>/why-not-progressing.md"
+  manual_delivery_notice:
+    - "delivery/review automation is still manual in this stage flow"
+  phase_notes:
+    AGILE_COACH_1: "Implemented in runtime script"
+    AGILE_COACH_2: "Manual operator workflow guided by generated status artifacts"

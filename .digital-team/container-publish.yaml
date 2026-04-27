@@ -1,0 +1,18 @@
+version: 1
+enabled: false
+defaults:
+  registry: ghcr.io
+  context: .
+  dockerfile: Dockerfile
+  readme: README.md
+  description: Replace with a concise runtime description for this image.
+  documentation_url: ""
+  platforms:
+    - linux/amd64
+    - linux/arm64
+  docs_globs:
+    - README.md
+    - docs/**
+images:
+  - id: app
+    description: Replace with the published package description shown in GHCR.

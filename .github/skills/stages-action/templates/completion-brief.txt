@@ -1,0 +1,14 @@
+[stages-action][brief] stage=%s
+[stages-action][brief] where-we-stand: delivery=%s; review=%s; board_done=%s
+[stages-action][brief] github-sync: issues_open=%s; wiki=%s; wiki_url=%s
+[stages-action][brief] open-items: backlog=%s; in-progress=%s; blocked=%s; total_open=%s
+%s
+%s
+%s
+%s
+%s
+%s
+%s
+[stages-action][brief] clarify: gate_reason=%s
+[stages-action][brief] project-powerpoint: required=%s; post_gate=%s; hash_match=%s; source=%s; wiki_copy=%s
+[stages-action][brief] next-step: %s

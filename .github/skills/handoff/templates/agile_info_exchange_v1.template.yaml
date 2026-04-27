@@ -1,0 +1,22 @@
+layer: digital-generic-team
+schema: agile_info_exchange_v1
+exchange_id: "{{exchange_id}}"
+from_role: "{{from_role}}"
+to_role: "agile-coach"
+direction: "{{request_to_agile_coach_or_response_from_agile_coach}}"
+intent: "{{intent}}"
+requested_domain: "{{board_wiki_or_board_and_wiki}}"
+current_state:
+  summary: "{{current_state_summary}}"
+expected_outputs:
+  - "{{expected_output_item}}"
+completion_criteria:
+  - "{{completion_criteria_item}}"
+constraints:
+  - "{{constraint_item}}"
+assumptions:
+  - "{{assumption_item}}"
+open_questions:
+  - "{{question_item}}"
+artifacts:
+  - "{{artifact_path}}"

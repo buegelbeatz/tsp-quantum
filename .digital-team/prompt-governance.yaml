@@ -1,0 +1,4 @@
+# Prompt governance for child layers.
+# Keep this file local per repository and maintain disabled prompt commands here.
+# Commands are plain names without leading slash (e.g. quality-fix).
+disabled_prompts: []

@@ -1,0 +1,21 @@
+# Override registry for layer-specific replacements of inherited .github assets.
+# This file is copied into child layers once and then kept local.
+# Required fields per override entry:
+# - path: relative path under .github/, e.g. prompts/help.prompt.md
+# - owner_layer: current repository name
+# - base_layer: parent layer name providing the inherited source
+# - base_hash: sha256 hash of the inherited parent file content
+# - reason: short business/technical justification
+# Optional:
+# - mode: replace | merge
+#
+# Example:
+# overrides:
+#   - path: prompts/help.prompt.md
+#     owner_layer: digital-iot-team
+#     base_layer: digital-generic-team
+#     base_hash: 2f16a4...<sha256>
+#     reason: "Adds IoT specific prompt references"
+#     mode: replace
+
+overrides: []

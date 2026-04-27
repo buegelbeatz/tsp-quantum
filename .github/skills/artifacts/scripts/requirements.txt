@@ -1,0 +1,7 @@
+# Runtime extraction stack for artifacts and artifacts-input-2-data pipelines
+markitdown
+Pillow
+pillow-heif
+pytesseract
+faster-whisper
+PyYAML

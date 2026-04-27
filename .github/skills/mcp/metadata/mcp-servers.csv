@@ -1,0 +1,5 @@
+server_id;image_or_command;transport;domain;description;prompt_owner
+paper-search;.github/skills/mcp/scripts/mcp-proxy-wrapper.sh paper-search .github/skills/mcp/scripts/mcp-paper-search.sh;stdio;research;Academic paper search MCP server (container-first with mounted runtime venv);paperfit
+chrome-devtools;.github/skills/mcp/scripts/mcp-proxy-wrapper.sh chrome-devtools npx chrome-devtools-mcp@latest --browserUrl http://[::1]:9222 --no-usage-statistics;stdio;browser-debugging;Chrome DevTools MCP server pinned to local CDP endpoint at [::1]:9222;chrome
+fetch;.github/skills/mcp/scripts/mcp-proxy-wrapper.sh fetch npx -y @modelcontextprotocol/server-fetch;stdio;web;Official MCP fetch server for retrieving and processing web content as Markdown;*
+memory;.github/skills/mcp/scripts/mcp-proxy-wrapper.sh memory npx -y @modelcontextprotocol/server-memory;stdio;knowledge;Official MCP knowledge graph memory server for persistent entity and relation storage;agents

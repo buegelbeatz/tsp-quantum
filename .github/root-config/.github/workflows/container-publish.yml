@@ -1,0 +1,140 @@
+name: container-publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+env:
+  CONTAINER_PUBLISH_CONFIG: .digital-team/container-publish.yaml
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install config dependency
+        run: python3 -m pip install 'PyYAML>=6.0'
+
+      - name: Validate publish config
+        run: python3 .github/skills/container-publish/scripts/container_publish.py validate "$CONTAINER_PUBLISH_CONFIG" .
+
+      - name: Resolve matrix
+        id: matrix
+        run: |
+          matrix_json="$(python3 .github/skills/container-publish/scripts/container_publish.py matrix "$CONTAINER_PUBLISH_CONFIG" .)"
+          {
+            echo 'matrix<<EOF'
+            echo "$matrix_json"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: ${{ toJson(fromJson(needs.prepare.outputs.matrix).include) != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install config dependency
+        run: python3 -m pip install 'PyYAML>=6.0'
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.documentation=${{ matrix.documentation_url != '' && matrix.documentation_url || format('{0}/{1}/blob/{2}/{3}', github.server_url, github.repository, github.ref_name, matrix.readme) }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platforms }}
+          push: true
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          provenance: true
+          sbom: true
+
+      - name: Package documentation bundle
+        run: |
+          python3 .github/skills/container-publish/scripts/container_publish.py \
+            package-docs "$CONTAINER_PUBLISH_CONFIG" . "${{ matrix.id }}" "$RUNNER_TEMP/${{ matrix.id }}-docs.tar.gz"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Publish documentation artifact to GHCR
+        env:
+          ORAS_USERNAME: ${{ github.actor }}
+          ORAS_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$ORAS_PASSWORD" | oras login ghcr.io --username "$ORAS_USERNAME" --password-stdin
+          oras push "${{ matrix.docs_image }}:sha-${GITHUB_SHA}" \
+            --artifact-type application/vnd.digital-team.docs.bundle.v1+tar \
+            --annotation "org.opencontainers.image.title=${{ github.event.repository.name }} docs" \
+            --annotation "org.opencontainers.image.description=${{ matrix.description }} documentation bundle" \
+            --annotation "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            "$RUNNER_TEMP/${{ matrix.id }}-docs.tar.gz:application/gzip"
+
+      - name: Publish workflow summary
+        run: |
+          {
+            echo "## Published container artifacts"
+            echo ""
+            echo "- Image: ${{ matrix.image }}"
+            echo "- Docs artifact: ${{ matrix.docs_image }}:sha-${GITHUB_SHA}"
+            echo "- Digest: ${{ steps.build.outputs.digest }}"
+          } >> "$GITHUB_STEP_SUMMARY"

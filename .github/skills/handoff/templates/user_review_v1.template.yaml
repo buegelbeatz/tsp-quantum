@@ -1,0 +1,35 @@
+layer: digital-generic-team
+schema: user_review_v1
+review_id: "{{review_id}}"
+from_role: "user-standard"
+to_role: "ux-designer"
+design_artifact: "{{design_artifact_path}}"
+iteration: {{iteration}}
+task_performed: "{{task_performed}}"
+criteria_ratings:
+  discoverability:
+    score: {{score_discoverability_1_to_5}}
+    justification: "{{justification_discoverability}}"
+  clarity:
+    score: {{score_clarity_1_to_5}}
+    justification: "{{justification_clarity}}"
+  navigation:
+    score: {{score_navigation_1_to_5}}
+    justification: "{{justification_navigation}}"
+  error_recovery:
+    score: {{score_error_recovery_1_to_5}}
+    justification: "{{justification_error_recovery}}"
+  mobile_familiarity:
+    score: {{score_mobile_familiarity_1_to_5}}
+    justification: "{{justification_mobile_familiarity}}"
+composite_score: {{composite_score}}
+positive_findings:
+  - "{{positive_finding_item}}"
+confusion_findings:
+  - location: "{{location}}"
+    description: "{{description}}"
+    severity: "{{minor_moderate_or_major}}"
+blocking_issues:
+  - "{{blocking_issue_item}}"
+recommendation: "{{proceed_revise_or_redesign}}"
+review_artifact: "{{review_artifact_path}}"

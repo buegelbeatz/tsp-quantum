@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Jamie Rivera
+N:Rivera;Jamie;;;
+ORG:SampleFile QA
+TITLE:QA Lead
+EMAIL;TYPE=WORK:jamie.rivera@samplefile.test
+TEL;TYPE=WORK,VOICE:+1-212-555-0101
+ADR;TYPE=WORK:;;1200 Test Fixture Ave;New York;NY;10001;USA
+END:VCARD

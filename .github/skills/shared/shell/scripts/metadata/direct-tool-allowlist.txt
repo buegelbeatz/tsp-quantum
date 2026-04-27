@@ -1,0 +1,31 @@
+# path|tool|reason
+.github/skills/shared/shell/scripts/preflight-check.sh|python3|Preflight validates host prerequisites before the registry path can be trusted.
+.github/skills/shared/shell/scripts/preflight-check.sh|docker|Preflight validates host prerequisites before the registry path can be trusted.
+.github/skills/shared/shell/scripts/preflight-check.sh|podman|Preflight validates host prerequisites before the registry path can be trusted.
+.github/skills/shared/shell/scripts/preflight-check.sh|gh|Preflight validates host prerequisites before the registry path can be trusted.
+.github/skills/shared/shell/scripts/lib/tools.sh|python3|Tool metadata checks need a minimal host Python probe for the wrapper itself.
+.github/skills/shared/shell/scripts/lib/containers.sh|docker|Container runtime detection must probe the host engine before wrapper execution is possible.
+.github/skills/shared/shell/scripts/lib/github-yaml.sh|python3|YAML formatting helper keeps a minimal inline Python bridge as a shared-shell exception.
+.github/skills/shared/shell/scripts/lib/governance.sh|python3|Schema validation keeps a minimal inline Python bridge as a shared-shell exception.
+.github/skills/shared/local-command-orchestration/scripts/run-tests.sh|python3|Bootstrap/test-runtime resolution may need a host interpreter before container orchestration is assembled.
+.github/skills/shared/local-command-orchestration/scripts/run-tests.sh|pytest|The test runner intentionally supports explicit local execution as a bootstrap exception.
+.github/skills/shared/local-command-orchestration/scripts/run-tests.sh|ruff|The test runner intentionally supports explicit local execution as a bootstrap exception.
+.github/skills/shared/local-command-orchestration/scripts/prompt-scaffold.sh|python3|Prompt scaffolding retains inline Python templating as a documented bootstrap exception.
+.github/skills/shared/orchestration/scripts/cleanup.sh|python3|Cleanup keeps a local fallback in its wrapper helper for recovery scenarios.
+.github/skills/shared/orchestration/scripts/cleanup.sh|gh|Cleanup may fall back to direct gh only through the shared github wrapper path.
+.github/skills/stages-action/scripts/stages-action.sh|python3|Stage bootstrap allows a final host-python fallback when no managed runtime exists yet.
+.github/skills/board/scripts/board-ticket.sh|python3|Board helper retains a last-resort local fallback if the shared wrapper is missing.
+.github/skills/board/scripts/board-cleanup.sh|python3|Board cleanup retains a last-resort local fallback if the shared wrapper is missing.
+.github/skills/git/scripts/_git_common.sh|python3|Permission evaluation keeps a minimal inline Python bridge as a documented exception.
+.github/skills/mcp/scripts/mcp-gen-vscode-config.sh|python3|MCP config generation keeps inline Python for deterministic JSON transformation.
+.github/skills/mcp/scripts/mcp-launch.sh|python3|MCP launch retains a local Python fallback if the shared wrapper is unavailable.
+.github/skills/readme-standard/scripts/readme-quickstart.sh|python3|README quickstart parsing keeps a documented Python fallback when yq is unavailable.
+.github/skills/shared/shell/scripts/github/gh-board-create.sh|python3|GitHub wrapper scripts keep inline Python for JSON shaping close to gh responses.
+.github/skills/shared/shell/scripts/github/gh-board-items-add.sh|python3|GitHub wrapper scripts keep inline Python for JSON shaping close to gh responses.
+.github/skills/shared/shell/scripts/github/gh-boards-list.sh|python3|GitHub wrapper scripts keep inline Python for JSON shaping close to gh responses.
+.github/skills/shared/shell/scripts/github/gh-issue-checklist-set.sh|python3|GitHub wrapper scripts keep inline Python for checklist text transformation.
+.github/skills/shared/shell/scripts/github/gh-issues-list.sh|python3|GitHub wrapper scripts keep inline Python for JSON shaping close to gh responses.
+.github/skills/shared/shell/scripts/github/gh-pr-comment.sh|python3|GitHub wrapper scripts keep inline Python for review payload formatting.
+.github/skills/shared/shell/scripts/github/gh-pr-create.sh|python3|GitHub wrapper scripts keep inline Python for PR result formatting.
+.github/skills/shared/shell/scripts/github/gh-wiki-list-pages.sh|python3|GitHub wrapper scripts keep inline Python for wiki inventory formatting.
+.github/skills/shared/shell/scripts/runtime/layer-venv-sync.sh|python3|Layer bootstrap must create and hydrate the managed Python runtime before the wrapper can be relied on.

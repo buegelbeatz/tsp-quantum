@@ -1,0 +1,60 @@
+# Delivery Review Aggregation Status ({{ stage }})
+
+> **Purpose:** Human review gate record.
+> Shows what a reviewer must do before any ticket transitions to `done`.
+> For automation-only tracking see `delivery-automation-status.md`.
+
+## Summary
+
+- **generated_at:** {{ generated_at }}
+- **stage:** {{ stage }}
+- **automation_step:** {{ automation_step }}
+- **status:** {{ status }}
+- **reason:** {{ reason }}
+
+## Human Review Gate
+
+| Gate | Required | Met |
+|------|----------|-----|
+| PR created | yes | {{ pr_created }} |
+| PR approved by human | yes | {{ pr_approved }} |
+| PR merged to main | yes | {{ pr_merged }} |
+| Quality gate passed | yes | {{ quality_gate_passed }} |
+| Approval evidence recorded | yes | {{ approval_evidence_recorded }} |
+
+> ⚠️ **Board transition to `done` is blocked until all gates above show `✅`.**
+
+## Approval Checklist
+
+- [ ] PR created
+- [ ] Human approval recorded
+- [ ] PR merged to main
+- [ ] Quality gate passed
+- [ ] Approval evidence linked
+
+## Open PRs Requiring Review
+
+{% if open_prs %}
+{% for pr in open_prs %}
+- [ ] **{{ pr.title }}**  
+	Link: {{ pr.url }}
+{% endfor %}
+{% else %}
+_No open PRs yet. Delivery agents must create PRs before review can proceed._
+{% endif %}
+
+## Input Recovery Status
+
+| File | Outcome | Located At |
+|------|---------|-----------|
+{% for r in recovery_results %}
+| `{{ r.file }}` | **{{ r.outcome }}** | `{{ r.location }}` |
+{% endfor %}
+
+> Recovery outcomes use three explicit states: **found** · **partially recoverable** · **not recoverable**
+
+## Next Actions
+
+{% for action in next_actions %}
+- {{ action }}
+{% endfor %}

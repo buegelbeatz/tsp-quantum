@@ -1,0 +1,15 @@
+layer: digital-generic-team
+scrum_guide:
+  - Scrum Guide (latest): artifact purpose, accountabilities, and increment focus.
+iso_25010:
+  - ISO/IEC 25010: non-functional quality model for software requirements.
+wcag_22_aa:
+  - WCAG 2.2 AA: accessibility acceptance baseline for UX/UI work.
+owasp:
+  - OWASP ASVS / OWASP Top 10: security requirement baseline.
+team_governance:
+  - Team-internal governance: stage gates and delivery evidence in .digital-artifacts.
+clean_code:
+  - Clean Code instruction: keep modules cohesive, naming explicit, and behavior testable.
+design_patterns:
+  - Design Patterns instruction: prefer explicit, minimal patterns that reduce coupling and support extension.

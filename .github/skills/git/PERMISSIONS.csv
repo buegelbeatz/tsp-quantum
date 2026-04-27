@@ -1,0 +1,11 @@
+role;read-status;read-log;read-diff;tag-create;branch-create;branch-checkout;stage-add;commit-create;push-branch
+agile-coach;yes;yes;yes;yes;no;no;no;no;no
+generic-deliver;yes;yes;yes;no;yes;yes;yes;yes;yes
+generic-review;yes;yes;yes;no;no;no;no;no;no
+fullstack-engineer;yes;yes;yes;no;yes;yes;yes;yes;yes
+ux-designer;yes;yes;yes;no;yes;yes;yes;yes;yes
+data-scientist;yes;yes;yes;no;yes;yes;yes;yes;yes
+pullrequest-reviewer;yes;yes;yes;no;no;no;no;no;no
+security-expert;yes;yes;yes;no;no;no;no;no;no
+quality-expert;yes;yes;yes;no;no;no;no;no;no
+platform-architect;yes;yes;yes;no;no;no;no;no;no

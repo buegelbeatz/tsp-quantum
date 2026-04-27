@@ -1,0 +1,3 @@
+layers:
+- name: digital-generic-team
+  source: https://github.com/buegelbeatz/digital-generic-team.git

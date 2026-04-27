@@ -1,0 +1,39 @@
+# Delivery Execution Status — {{ task_id }}
+
+> **Automation-generated execution record.** This artifact tracks what the delivery agent implemented.
+> For human approval status see `delivery-review-status.md`.
+
+- generated_at: {{ generated_at }}
+- task_id: {{ task_id }}
+- stage: {{ stage }}
+- branch: {{ branch }}
+- assignee: {{ assignee }}
+- activity_summary: {{ activity_summary }}
+
+## Scope Implemented
+
+{{ scope_section }}
+
+## Acceptance Criteria Verification
+
+| Criterion | Status | Evidence |
+|-----------|--------|---------|
+{% for row in acceptance_criteria_rows %}
+| {{ row.criterion }} | {{ row.status }} | {{ row.evidence }} |
+{% endfor %}
+
+## Input Recovery
+
+{% if recovery_results %}
+| File | Outcome | Located At |
+|------|---------|-----------|
+{% for r in recovery_results %}
+| {{ r.file }} | {{ r.outcome }} | {{ r.location }} |
+{% endfor %}
+{% else %}
+_No recovery operation performed._
+{% endif %}
+
+## Next Step for Human Reviewer
+
+{{ next_step }}

@@ -1,0 +1,7 @@
+artifact_name,artifact_type,version,location,format,created_at,verified
+skill-git,shell,1.0.0,.../git/scripts,sh,2026-03-25T00:00:00Z,yes
+skill-github,shell,1.0.0,.../github/scripts,sh,2026-03-25T00:00:00Z,yes
+skill-mcp,shell,1.0.0,.../mcp/scripts,sh,2026-03-25T00:00:00Z,yes
+skill-generic-deliver,shell,1.0.0,.../generic-deliver/scripts,sh,2026-03-25T00:00:00Z,yes
+skill-fullstack-engineer,shell,1.0.0,.../fullstack-engineer/scripts,sh,2026-03-25T00:00:00Z,yes
+skill-shared/task-orchestration,shell,1.0.0,.../shared/task-orchestration/scripts,sh,2026-03-25T00:00:00Z,yes

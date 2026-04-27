@@ -1,0 +1,12 @@
+.*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+!.gitignore
+!.githooks
+!.coveragerc
+!.digital-team/
+!.github/
+!*.example
+!.*.example

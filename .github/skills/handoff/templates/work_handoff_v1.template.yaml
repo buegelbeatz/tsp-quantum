@@ -1,0 +1,20 @@
+layer: digital-generic-team
+schema: work_handoff_v1
+handoff_id: "{{handoff_id}}"
+from_role: "{{from_role}}"
+to_role: "{{to_role}}"
+goal: "{{goal}}"
+current_state:
+  summary: "{{current_state_summary}}"
+expected_outputs:
+  - "{{expected_output_item}}"
+completion_criteria:
+  - "{{completion_criteria_item}}"
+assumptions:
+  - "{{assumption_item}}"
+open_questions:
+  - "{{question_item}}"
+artifacts:
+  - "{{artifact_path}}"
+definition_of_done:
+  - "{{done_item}}"

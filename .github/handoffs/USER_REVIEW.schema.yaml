@@ -1,0 +1,178 @@
+layer: digital-generic-team
+schema: user_review_v1
+$schema: https://json-schema.org/draft/2020-12/schema
+title: User Review v1
+description: >
+  Structured UX feedback from the user-standard agent to the ux-designer agent.
+  Captures per-criteria ratings (1-5), positive findings, confusion findings,
+  blocking issues, and a recommendation for the current design iteration.
+type: object
+additionalProperties: false
+required:
+  - schema
+  - review_id
+  - from_role
+  - to_role
+  - design_artifact
+  - iteration
+  - task_performed
+  - criteria_ratings
+  - composite_score
+  - positive_findings
+  - confusion_findings
+  - blocking_issues
+  - recommendation
+  - review_artifact
+properties:
+  schema:
+    type: string
+    const: user_review_v1
+  review_id:
+    type: string
+    minLength: 3
+    description: >
+      Unique review identifier. Convention:
+      user-review-<YYYYMMDD>-<feature-slug>-r<n>
+  from_role:
+    type: string
+    pattern: "^user-[a-z0-9-]+$"
+    description: >
+      Reviewing user persona role. Current default is user-standard.
+      Future variants may include user-scientist, user-patient, user-physician.
+  to_role:
+    type: string
+    const: ux-designer
+  design_artifact:
+    type: string
+    minLength: 5
+    description: >
+      Path to the reviewed design artifact (SVG scribble or screenshot set).
+      Example: docs/ux/scribbles/login-form-scribble-r1.svg
+  iteration:
+    type: integer
+    minimum: 1
+    description: Review round number (1 = first review, 2 = second, etc.)
+  task_performed:
+    type: string
+    minLength: 10
+    description: >
+      Verbatim copy of the task description from the work_handoff_v1 goal field.
+  criteria_ratings:
+    type: object
+    additionalProperties: false
+    required:
+      - discoverability
+      - clarity
+      - navigation
+      - error_recovery
+      - mobile_familiarity
+    properties:
+      discoverability:
+        $ref: "#/$defs/criterion"
+      clarity:
+        $ref: "#/$defs/criterion"
+      navigation:
+        $ref: "#/$defs/criterion"
+      error_recovery:
+        $ref: "#/$defs/criterion"
+      mobile_familiarity:
+        $ref: "#/$defs/criterion"
+  composite_score:
+    type: number
+    minimum: 1.0
+    maximum: 5.0
+    description: >
+      Arithmetic mean of all 5 criteria scores, rounded to 1 decimal place.
+      Rule: (discoverability + clarity + navigation + error_recovery + mobile_familiarity) / 5
+  positive_findings:
+    type: array
+    minItems: 1
+    description: >
+      At least one positive observation from the user perspective.
+      Written in plain language — never technical jargon.
+    items:
+      type: string
+      minLength: 5
+  confusion_findings:
+    type: array
+    description: >
+      List of friction points. Empty array if none encountered.
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - location
+        - description
+        - severity
+      properties:
+        location:
+          type: string
+          minLength: 3
+          description: >
+            Human-readable element location as a real user would describe it.
+            Example: "the blue button at the top right of the card"
+        description:
+          type: string
+          minLength: 10
+          description: >
+            What the user experiences — confusion, uncertainty, or friction.
+            Written from the user's perspective, never technically.
+        severity:
+          type: string
+          enum:
+            - minor
+            - moderate
+            - major
+          description: >
+            minor   = cosmetic friction, does not affect task completion
+            moderate = friction that causes hesitation or requires guessing
+            major    = likely causes abandonment; must be fixed
+  blocking_issues:
+    type: array
+    description: >
+      Issues that prevent task completion entirely. Empty array if none.
+      If any item is present, recommendation MUST be "revise" or "redesign".
+    items:
+      type: string
+      minLength: 5
+  recommendation:
+    type: string
+    enum:
+      - proceed
+      - revise
+      - redesign
+    description: >
+      proceed  — composite_score >= 4.0 and blocking_issues is empty
+      revise   — composite_score in [2.0, 4.0) or blocking_issues not empty
+      redesign — composite_score < 2.0
+  review_artifact:
+    type: string
+    minLength: 5
+    description: >
+      Path to the written review markdown file.
+      Convention: .digital-artifacts/60-review/<stage>/YYYY-MM-DD/user-review-<id>-r<n>.md
+
+$defs:
+  criterion:
+    type: object
+    additionalProperties: false
+    required:
+      - score
+      - justification
+    properties:
+      score:
+        type: integer
+        minimum: 1
+        maximum: 5
+        description: >
+          1 = Broken/Unusable
+          2 = Major friction
+          3 = Functional with friction
+          4 = Good, minor issues
+          5 = Excellent, feels natural
+      justification:
+        type: string
+        minLength: 5
+        description: >
+          One to two sentences from the user perspective explaining this score.
+          Never use technical language.

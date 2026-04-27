@@ -1,0 +1,12 @@
+role;input;data;done;specifications;stage;planning;review;testdata
+agile-coach;read+write;write;write;read;read+write;read+write;read;read
+generic-deliver;read;read+write;read+write;read;read;read+write;write;no
+fullstack-engineer;read;read+write;read+write;read;read;read+write;write;no
+ux-designer;read;read+write;read+write;read;read;no;write;no
+data-scientist;read;read+write;read+write;read;read;read;write;no
+platform-architect;read;read;no;read+write;read+write;no;write;no
+pullrequest-reviewer;no;read;no;read;no;no;write;no
+security-expert;read;read;no;read;no;no;write;no
+quality-expert;no;read;no;read;no;no;write;no
+generic-expert;no;read;no;read;no;no;write;no
+generic-review;no;no;no;no;no;no;write;no

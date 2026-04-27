@@ -1,0 +1,36 @@
+From: calendar@samplefile.test
+To: qa-team@samplefile.test
+Subject: Sample file review sync
+Date: Sat, 14 Mar 2026 13:05:00 -0400
+Message-ID: <calendar-invite-3301@samplefile.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============0803852010932347280=="
+
+--===============0803852010932347280==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Invitation: sample file review sync for parser and import fixture updates.
+
+--===============0803852010932347280==
+Content-Type: text/calendar; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//SampleFile//Fixture Generator//EN
+BEGIN:VEVENT
+UID:invite-3301@samplefile.test
+DTSTAMP:20260314T170500Z
+DTSTART:20260315T150000Z
+DTEND:20260315T153000Z
+SUMMARY:Sample file review sync
+DESCRIPTION:Review parser fixtures, calendar imports, and export validation c=
+overage.
+LOCATION:Conference Room A
+END:VEVENT
+END:VCALENDAR
+
+--===============0803852010932347280==--

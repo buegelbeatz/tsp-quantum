@@ -1,0 +1,41 @@
+From: billing@samplefile.test
+To: qa-team@samplefile.test
+Subject: Invoice export ready for review
+Date: Sat, 14 Mar 2026 09:12:00 -0400
+Message-ID: <invoice-export-1001@samplefile.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============3915582561460404363=="
+
+--===============3915582561460404363==
+Content-Type: multipart/alternative;
+ boundary="===============0829749990254437569=="
+
+--===============0829749990254437569==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+The March invoice export is ready for parser review.
+Attached: export manifest and checksum summary.
+Reference batch: exp_2026_03_14_a.
+
+--===============0829749990254437569==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>The March invoice export is ready for parser review.</p><p>Att=
+ached: export manifest and checksum summary.</p><p><strong>Batch:</strong> ex=
+p_2026_03_14_a</p></body></html>
+
+--===============0829749990254437569==--
+
+--===============3915582561460404363==
+Content-Type: text/tab-separated-values
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="export_manifest.tsv"
+MIME-Version: 1.0
+
+ZmlsZW5hbWUJc3RhdHVzCXNoYTI1NgppbnZvaWNlc19tYXJjaC50c3YJY29tcGxldGUJM2Q2ZjZj
+MmI3YzRmCg==
+
+--===============3915582561460404363==--

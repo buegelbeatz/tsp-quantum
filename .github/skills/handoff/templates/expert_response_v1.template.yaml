@@ -1,0 +1,17 @@
+layer: digital-generic-team
+schema: expert_response_v1
+request_id: "{{request_id}}"
+from_role: "{{from_role}}"
+to_role: "{{to_role}}"
+summary: "{{summary}}"
+confidence: "{{confidence_low_medium_high}}"
+recommendations:
+  - "{{recommendation_item}}"
+risks:
+  - "{{risk_item}}"
+assumptions:
+  - "{{assumption_item}}"
+open_questions:
+  - "{{question_item}}"
+artifacts:
+  - "{{artifact_path}}"

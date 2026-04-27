@@ -1,0 +1,15 @@
+tool_name,min_version,public_container,version_args,version_regex,install_help_mac,install_help_windows
+python3,3.14,python:3.14-slim,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install python,winget install Python.Python.3.14
+pytest,7.0,python:3.14-slim,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,python3 -m pip install pytest,py -m pip install pytest
+pip3,23.0,python:3.14-slim,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,python3 -m ensurepip --upgrade,py -m ensurepip --upgrade
+ruff,0.4,ghcr.io/astral-sh/ruff:latest,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install ruff,winget install ruff
+shellcheck,0.9,koalaman/shellcheck:stable,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install shellcheck,winget install shellcheck
+jq,1.6,ghcr.io/jqlang/jq:latest,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install jq,winget install jqlang.jq
+gh,2.45,docker.io/maniator/gh:latest,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install gh,winget install GitHub.cli
+git,2.40,alpine/git:latest,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install git,winget install Git.Git
+mypy,1.8,python:3.14-slim,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,python3 -m pip install mypy,py -m pip install mypy
+ffmpeg,6.0,default=jrottenberg/ffmpeg:6.1-alpine;linux/arm64=jrottenberg/ffmpeg:6.1-alpine;linux/amd64=jrottenberg/ffmpeg:6.1-alpine,-version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install ffmpeg,winget install Gyan.FFmpeg
+ffprobe,6.0,default=jrottenberg/ffmpeg:6.1-alpine;linux/arm64=jrottenberg/ffmpeg:6.1-alpine;linux/amd64=jrottenberg/ffmpeg:6.1-alpine,-version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install ffmpeg,winget install Gyan.FFmpeg
+skopeo,1.14,default=quay.io/skopeo/stable;linux/arm64=quay.io/skopeo/stable;linux/amd64=quay.io/skopeo/stable,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,brew install skopeo,winget install RedHat.Skopeo
+bash,unknown,,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,Install bash for macOS or configure container image,Install bash for Windows or configure container image
+mmdc,10.0,minlag/mermaid-cli:latest,--version,[0-9]+\.[0-9]+(\.[0-9]+)?,npm install -g @mermaid-js/mermaid-cli,npm install -g @mermaid-js/mermaid-cli
