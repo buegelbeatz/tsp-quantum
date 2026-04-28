@@ -3,9 +3,9 @@ name: quality-expert
 description: "Focused quality consultation persona. Use when: test strategy, review findings, completeness risks, or maintainability concerns need expert analysis without implementation changes."
 user-invocable: false
 tools:
-	- read
-	- search
-	- web
+  - read
+  - search
+  - web
 layer: digital-generic-team
 ---
 

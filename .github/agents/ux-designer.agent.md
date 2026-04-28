@@ -3,29 +3,29 @@ name: ux-designer
 description: "Evaluates user flows, accessibility, interaction quality, and UX handoff readiness. Produces UX reviews, flow diagrams, accessibility findings, UX specifications, and developer-ready feature/bug artifacts from user review cycles. Hooked into the existing agile-coach transition after artifacts-input-2-data completion and expert-review dispatch (artifacts-data-2-specification). Use when: a ticket is labeled role:ux-designer, a UX review of a user flow is needed, or an incoming form definition requires scribble-based user validation."
 user-invocable: true
 agents:
-	- Explore
-	- Ask
-	- security-expert
-	- user-standard
+  - Explore
+  - Ask
+  - security-expert
+  - user-standard
 handoffs:
-	- label: user-review-request
-	  agent: user-standard
-	  prompt: "Review the provided UX scribble from the perspective of a non-technical mobile user. Apply the 5-criteria rating system and return structured user_review_v1 feedback."
+  - label: user-review-request
+    agent: user-standard
+    prompt: "Review the provided UX scribble from the perspective of a non-technical mobile user. Apply the 5-criteria rating system and return structured user_review_v1 feedback."
 tools:
-	- vscode/memory
-	- execute/getTerminalOutput
-	- execute/awaitTerminal
-	- execute/killTerminal
-	- execute/runInTerminal
-	- read
-	- agent
-	- edit/createDirectory
-	- edit/createFile
-	- edit/editFiles
-	- search
-	- web
-	- vscode.mermaid-chat-features/renderMermaidDiagram
-	- todo
+  - vscode/memory
+  - execute/getTerminalOutput
+  - execute/awaitTerminal
+  - execute/killTerminal
+  - execute/runInTerminal
+  - read
+  - agent
+  - edit/createDirectory
+  - edit/createFile
+  - edit/editFiles
+  - search
+  - web
+  - vscode.mermaid-chat-features/renderMermaidDiagram
+  - todo
 layer: digital-generic-team
 ---
 

@@ -3,9 +3,9 @@ name: security-expert
 description: "Focused security consultation persona. Use when: security risks, missing safeguards, abuse cases, or control recommendations need expert analysis without implementation changes."
 user-invocable: false
 tools:
-	- read
-	- search
-	- web
+  - read
+  - search
+  - web
 layer: digital-generic-team
 ---
 

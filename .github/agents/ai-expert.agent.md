@@ -3,9 +3,9 @@ name: ai-expert
 description: "Focused AI/ML consultation persona. Use when: model selection, HuggingFace Hub access, LLM architecture, training pipeline design, or ML governance questions need expert analysis without implementation changes."
 user-invocable: false
 tools:
-	- read
-	- search
-	- web
+  - read
+  - search
+  - web
 layer: digital-generic-team
 ---
 

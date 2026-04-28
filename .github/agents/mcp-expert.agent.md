@@ -3,9 +3,9 @@ name: mcp-expert
 description: "Focused MCP consultation persona. Use when: registry design, MCP server selection, transport choices, or MCP runtime risks need expert analysis without implementation changes."
 user-invocable: false
 tools:
-	- read
-	- search
-	- web
+  - read
+  - search
+  - web
 layer: digital-generic-team
 ---
 

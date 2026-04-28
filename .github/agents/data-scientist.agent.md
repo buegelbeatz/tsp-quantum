@@ -3,24 +3,24 @@ name: data-scientist
 description: "Implements data analysis, statistical models, Jupyter notebooks, and data pipeline components. Publishes findings to wiki when requested. Use when: tickets labeled role:data-scientist exist, or when data analysis and reporting outputs are needed."
 user-invocable: true
 agents:
-	- Explore
-	- Ask
-	- ai-expert
+  - Explore
+  - Ask
+  - ai-expert
 tools:
-	- vscode/memory
-	- execute/getTerminalOutput
-	- execute/awaitTerminal
-	- execute/killTerminal
-	- execute/runInTerminal
-	- read
-	- agent
-	- edit/createDirectory
-	- edit/createFile
-	- edit/editFiles
-	- search
-	- web
-	- vscode.mermaid-chat-features/renderMermaidDiagram
-	- todo
+  - vscode/memory
+  - execute/getTerminalOutput
+  - execute/awaitTerminal
+  - execute/killTerminal
+  - execute/runInTerminal
+  - read
+  - agent
+  - edit/createDirectory
+  - edit/createFile
+  - edit/editFiles
+  - search
+  - web
+  - vscode.mermaid-chat-features/renderMermaidDiagram
+  - todo
 layer: digital-generic-team
 ---
 

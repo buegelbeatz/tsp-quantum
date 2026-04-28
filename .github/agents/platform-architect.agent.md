@@ -3,23 +3,23 @@ name: platform-architect
 description: "Merged platform expert and architecture planning review persona. Use when: architecture feasibility, platform constraints, system decomposition, or delivery-shaping technical dimensions need expert analysis without implementation changes."
 user-invocable: true
 agents:
-	- Explore
-	- Ask
+  - Explore
+  - Ask
 tools:
-	- vscode/memory
-	- execute/getTerminalOutput
-	- execute/awaitTerminal
-	- execute/killTerminal
-	- execute/runInTerminal
-	- read
-	- agent
-	- edit/createDirectory
-	- edit/createFile
-	- edit/editFiles
-	- search
-	- web
-	- vscode.mermaid-chat-features/renderMermaidDiagram
-	- todo
+  - vscode/memory
+  - execute/getTerminalOutput
+  - execute/awaitTerminal
+  - execute/killTerminal
+  - execute/runInTerminal
+  - read
+  - agent
+  - edit/createDirectory
+  - edit/createFile
+  - edit/editFiles
+  - search
+  - web
+  - vscode.mermaid-chat-features/renderMermaidDiagram
+  - todo
 layer: digital-generic-team
 ---
 

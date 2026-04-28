@@ -1,6 +1,5 @@
 ---
 name: agile-coach
-description: "Structures work into clear backlog items, acceptance criteria, definition of done, epics, stories, tasks, dependencies, and planning handoffs from intake artifacts."
 description: "Stage-Master and orchestrator: owns the full stage lifecycle from intake to delivery dispatch, delegates specialist work to platform-architect, ux-designer, fullstack-engineer, and other agents, and ensures every stage exits with actionable, PR-ready delivery units."
 user-invocable: true
 agents:

@@ -3,15 +3,15 @@ name: pullrequest-reviewer
 description: "Creates structured pull request review artifacts from diffs, changed files, ticket context, and relevant specifications. Use when: a delivery agent finished implementation and needs a review document for PR creation."
 user-invocable: false
 agents:
-	- Explore
+  - Explore
 tools:
-	- agent
-	- read
-	- search
-	- execute/runInTerminal
-	- execute/getTerminalOutput
-	- edit/createFile
-	- edit/editFiles
+  - agent
+  - read
+  - search
+  - execute/runInTerminal
+  - execute/getTerminalOutput
+  - edit/createFile
+  - edit/editFiles
 layer: digital-generic-team
 ---
 
