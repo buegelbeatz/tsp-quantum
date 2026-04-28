@@ -314,6 +314,40 @@ def _frontmatter_value(markdown_text: str, key: str) -> str:
     return ""
 
 
+def _review_list_section(review_text: str, heading: str) -> list[str]:
+    """Return cleaned bullet lines from a named review section."""
+    return _clean_markdown_lines(_extract_section(review_text, heading))
+
+
+def _review_signal_lines(bundle, review_text: str) -> list[str]:
+    """Build bundle-scoped review signal lines for the canonical stage document."""
+    recommendation = ""
+    scenario = ""
+    rationale = ""
+    for raw in review_text.splitlines():
+        line = raw.strip()
+        if line.startswith("- recommendation:"):
+            recommendation = line.split(":", 1)[1].strip()
+        elif line.startswith("- scenario:"):
+            scenario = line.split(":", 1)[1].strip()
+        elif line.startswith("- scenario_rationale:"):
+            rationale = line.split(":", 1)[1].strip()
+
+    gap_items = _review_list_section(review_text, "Gap Analysis")
+    if not gap_items:
+        gap_items = _bullet_lines(_extract_section(review_text, "Gap Analysis"))
+
+    lead = f"{bundle_id(bundle)}: recommendation={recommendation or 'unknown'}"
+    if scenario:
+        lead += f", scenario={scenario}"
+    lines = [lead]
+    if rationale:
+        lines.append(f"{bundle_id(bundle)}: rationale={rationale}")
+    if gap_items:
+        lines.append(f"{bundle_id(bundle)}: first_gap={gap_items[0]}")
+    return lines
+
+
 def _review_ready(review_text: str) -> tuple[bool, list[str]]:
     """Evaluate whether a cumulated review permits stage creation."""
     issues: list[str] = []
@@ -374,7 +408,7 @@ def _stage_title(stage: str) -> str:
 
 def _collect_spec_content(
     ready_specs: list[dict[str, object]],
-) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str], list[str], list[str]]:
     """Collect vision, goals, scope, constraints, stakeholders, and open questions from specs."""
     vision_inputs: list[str] = []
     goal_items: list[str] = []
@@ -383,6 +417,7 @@ def _collect_spec_content(
     out_scope_items: list[str] = []
     stakeholder_rows: list[str] = []
     open_questions: list[str] = []
+    review_signals: list[str] = []
 
     for item in ready_specs:
         spec_text = str(item["spec_text"])
@@ -406,6 +441,7 @@ def _collect_spec_content(
                 f"| Source bundle | {bundle_id(item['bundle'])} | See source specification |"  # type: ignore[arg-type]
             )
         review_text = str(item["review_text"])
+        review_signals.extend(_review_signal_lines(item["bundle"], review_text))
         open_questions.extend(
             _bullet_lines(_extract_section(review_text, "Open Questions"))
         )
@@ -421,6 +457,7 @@ def _collect_spec_content(
         out_scope_items,
         stakeholder_rows,
         open_questions,
+        review_signals,
     )
 
 
@@ -624,6 +661,16 @@ def _build_readiness_section(readiness_items: list[str]) -> list[str]:
     return ["## Definition of Done", "", *dod_content, ""]
 
 
+def _build_review_signals_section(review_signals: list[str]) -> list[str]:
+    """Build a compact review-signals section from cumulated review outputs."""
+    signal_lines = (
+        [f"- {item}" for item in review_signals]
+        if review_signals
+        else ["- No review signals were extracted from the current specification set."]
+    )
+    return ["## Review Signals", "", *signal_lines, ""]
+
+
 def _build_source_specs_section(ready_specs: list[dict[str, object]]) -> list[str]:
     """Build source specifications section."""
     spec_lines: list[str] = []
@@ -680,6 +727,7 @@ def _build_stage_sections(
     out_scope: list[str],
     stakeholder_rows: list[str],
     readiness_items: list[str],
+    review_signals: list[str],
     open_questions: list[str],
     ready_specs: list[dict[str, object]],
     date_value: str,
@@ -697,6 +745,7 @@ def _build_stage_sections(
         *_build_constraints_section(constraints),
         *_build_stakeholders_section(stakeholder_rows),
         *_build_readiness_section(readiness_items),
+        *_build_review_signals_section(review_signals),
         *_build_source_specs_section(ready_specs),
         *_build_open_questions_section(open_questions),
         *_build_history_section(date_value),
@@ -739,6 +788,7 @@ def _stage_document_content(
         out_scope_items,
         stakeholder_rows,
         open_questions,
+        review_signals,
     ) = _collect_spec_content(stage_specs)
     context_lines, goals, constraints, in_scope, out_scope, readiness_items = _normalize_spec_content(
         vision_inputs,
@@ -771,6 +821,7 @@ def _stage_document_content(
         out_scope,
         stakeholder_rows,
         readiness_items,
+        review_signals,
         open_questions,
         stage_specs,
         date_value,

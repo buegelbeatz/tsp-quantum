@@ -7,6 +7,7 @@ import re
 import shutil
 from collections import defaultdict
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,6 +19,195 @@ try:
     import yaml as _yaml  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover
     _yaml = None
+
+
+_REVIEW_QUESTION_BANK_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "templates"
+    / "digital-artifacts"
+    / "30-specification"
+    / "REVIEW_QUESTION_BANK.yaml"
+)
+
+_EXPERT_ROUTING_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "config"
+    / "expert-routing.yaml"
+)
+
+
+@lru_cache(maxsize=1)
+def _review_question_bank() -> dict[str, object]:
+    """Load the review question bank from skill templates (with safe fallback)."""
+    if _yaml is None or not _REVIEW_QUESTION_BANK_PATH.exists():
+        return {}
+
+    raw = _REVIEW_QUESTION_BANK_PATH.read_text(encoding="utf-8")
+    loaded = _yaml.safe_load(raw)
+    if isinstance(loaded, dict):
+        return loaded
+    return {}
+
+
+def _review_bank_role(role: str) -> dict[str, object]:
+    """Return role-specific review bank section."""
+    bank = _review_question_bank()
+    roles = bank.get("roles", {}) if isinstance(bank, dict) else {}
+    if isinstance(roles, dict):
+        entry = roles.get(role, {})
+        if isinstance(entry, dict):
+            return entry
+    return {}
+
+
+@lru_cache(maxsize=1)
+def _expert_routing_config() -> dict[str, object]:
+    """Load expert routing/scoring config from YAML with safe fallback."""
+    if _yaml is None or not _EXPERT_ROUTING_PATH.exists():
+        return {}
+
+    raw = _EXPERT_ROUTING_PATH.read_text(encoding="utf-8")
+    loaded = _yaml.safe_load(raw)
+    if isinstance(loaded, dict):
+        return loaded
+    return {}
+
+
+def _routing_role_config(role: str) -> dict[str, object]:
+    """Return role-specific routing config section."""
+    cfg = _expert_routing_config()
+    roles = cfg.get("roles", {}) if isinstance(cfg, dict) else {}
+    if isinstance(roles, dict):
+        entry = roles.get(role, {})
+        if isinstance(entry, dict):
+            return entry
+    return {}
+
+
+def _routing_profiles() -> dict[str, dict[str, object]]:
+    """Return configured domain routing profiles."""
+    cfg = _expert_routing_config()
+    raw_profiles = cfg.get("domain_profiles", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(raw_profiles, dict):
+        return {}
+    profiles: dict[str, dict[str, object]] = {}
+    for key, value in raw_profiles.items():
+        if isinstance(value, dict):
+            profiles[str(key)] = value
+    return profiles
+
+
+def _scoring_specificity_tokens() -> tuple[str, ...]:
+    """Return generic specificity tokens from routing config (with fallback)."""
+    defaults = (
+        "baseline",
+        "metric",
+        "acceptance",
+        "constraint",
+        "owner",
+        "risk",
+        "evidence",
+        "evaluation",
+    )
+    cfg = _expert_routing_config()
+    scoring = cfg.get("scoring", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(scoring, dict):
+        return defaults
+    raw = scoring.get("specificity_tokens", [])
+    if not isinstance(raw, list):
+        return defaults
+    tokens = tuple(str(item).strip().lower() for item in raw if str(item).strip())
+    return tokens or defaults
+
+
+def _scoring_role_bonus_tokens(agent: str) -> tuple[str, ...]:
+    """Return role-specific bonus tokens from routing config (with fallback)."""
+    fallback_map = {
+        "quantum-expert": (
+            "qaoa",
+            "vqe",
+            "qubo",
+            "quantum annealing",
+            "grover",
+            "qiskit",
+            "classical baseline",
+        ),
+        "quality-expert": (
+            "test",
+            "reproducible",
+            "reproducibility",
+            "validation",
+            "benchmark",
+            "notebook",
+        ),
+        "ux-designer": (
+            "user",
+            "ux",
+            "readability",
+            "visualization",
+            "explainability",
+        ),
+    }
+    cfg = _expert_routing_config()
+    scoring = cfg.get("scoring", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(scoring, dict):
+        return fallback_map.get(agent, ())
+    role_bonus = scoring.get("role_bonus_tokens", {})
+    if not isinstance(role_bonus, dict):
+        return fallback_map.get(agent, ())
+    raw_tokens = role_bonus.get(agent, [])
+    if not isinstance(raw_tokens, list):
+        return fallback_map.get(agent, ())
+    tokens = tuple(str(item).strip().lower() for item in raw_tokens if str(item).strip())
+    return tokens or fallback_map.get(agent, ())
+
+
+def _quantum_topic_catalog() -> tuple[list[tuple[str, str]], list[str]]:
+    """Return quantum topic token catalog and defaults from routing config."""
+    default_catalog = [
+        ("qaoa", "QAOA"),
+        ("vqe", "VQE"),
+        ("qubo", "QUBO"),
+        ("quantum annealing", "Quantum Annealing"),
+        ("grover", "Grover-style Search"),
+        ("qiskit", "Qiskit Circuit Workflow"),
+    ]
+    default_fallbacks = ["QAOA", "VQE", "Quantum Annealing"]
+
+    cfg = _expert_routing_config()
+    topic_catalog = cfg.get("topic_catalog", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(topic_catalog, dict):
+        return default_catalog, default_fallbacks
+
+    quantum_catalog = topic_catalog.get("quantum_algorithms", {})
+    if not isinstance(quantum_catalog, dict):
+        return default_catalog, default_fallbacks
+
+    mapped: list[tuple[str, str]] = []
+    raw_entries = quantum_catalog.get("token_to_label", [])
+    if isinstance(raw_entries, list):
+        for entry in raw_entries:
+            if isinstance(entry, dict):
+                token = str(entry.get("token", "")).strip().lower()
+                label = str(entry.get("label", "")).strip()
+                if token and label:
+                    mapped.append((token, label))
+
+    raw_defaults = quantum_catalog.get("defaults", [])
+    defaults = [str(item).strip() for item in raw_defaults if str(item).strip()] if isinstance(raw_defaults, list) else []
+
+    return (mapped or default_catalog), (defaults or default_fallbacks)
+
+
+def _render_review_templates(values: list[str], replacements: dict[str, str]) -> list[str]:
+    """Render placeholder-based review templates with deterministic replacement."""
+    rendered: list[str] = []
+    for item in values:
+        line = item
+        for key, value in replacements.items():
+            line = line.replace(f"{{{key}}}", value)
+        rendered.append(line)
+    return rendered
 
 
 def _active_stage() -> str:
@@ -368,11 +558,11 @@ def _bundle_synthesis_lines(source_text: str) -> tuple[list[str], list[str]]:
     ]
     focus_pool = sentence_like or notes
 
-    def _compact(line: str, max_len: int = 180) -> str:
+    def _compact(line: str, max_len: int = 260) -> str:
         cleaned = re.sub(r"\s+", " ", line).strip()
         if len(cleaned) <= max_len:
             return cleaned
-        return cleaned[: max_len - 1].rstrip() + "…"
+        return cleaned[:max_len].rstrip(" .,:;-")
 
     problem_lines = [f"Core problem: {_compact(focus_pool[0])}"]
     if len(focus_pool) > 1:
@@ -433,7 +623,8 @@ def _review_agents(repo_root: Path) -> list[str]:
 
 
 def _agent_keyword_map() -> dict[str, tuple[str, ...]]:
-    return {
+    """Return role keywords from routing config with deterministic fallback."""
+    defaults = {
         "platform-architect": (
             "architecture",
             "platform",
@@ -451,9 +642,31 @@ def _agent_keyword_map() -> dict[str, tuple[str, ...]]:
         "quantum-expert": ("quantum", "qubit", "qsharp"),
         "ux-designer": ("ux", "user", "form", "screen", "flow", "accessibility"),
     }
+    cfg = _expert_routing_config()
+    roles = cfg.get("roles", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(roles, dict):
+        return defaults
+
+    mapped: dict[str, tuple[str, ...]] = {}
+    for role, default_keywords in defaults.items():
+        role_cfg = roles.get(role, {})
+        if isinstance(role_cfg, dict):
+            raw_keywords = role_cfg.get("keywords", [])
+            if isinstance(raw_keywords, list):
+                keywords = tuple(str(item).strip().lower() for item in raw_keywords if str(item).strip())
+                if keywords:
+                    mapped[role] = keywords
+                    continue
+        mapped[role] = default_keywords
+    return mapped
 
 
 def _agent_focus(agent: str) -> str:
+    role_cfg = _routing_role_config(agent)
+    focus = role_cfg.get("focus") if isinstance(role_cfg, dict) else None
+    if isinstance(focus, str) and focus.strip():
+        return focus.strip()
+
     focus_map = {
         "platform-architect": "Platform strategy, interfaces, and cross-system consistency",
         "security-expert": "Threat model, controls, and residual risk",
@@ -476,20 +689,220 @@ def _agent_assignee_hint(agent: str) -> str:
     return "agile-coach"
 
 
+def _agent_evidence_line(agent: str, source_text: str) -> str:
+    """Return the strongest source note matching the expert role."""
+    keywords = _agent_keyword_map().get(agent, ())
+    notes = _source_note_lines(source_text, limit=12)
+    for note in notes:
+        lowered = note.lower()
+        if any(keyword in lowered for keyword in keywords):
+            return note
+    return notes[0] if notes else ""
+
+
+def _profile_is_active(profile: dict[str, object], source_text: str) -> bool:
+    """Return True when include_if_any keywords match source text."""
+    include = profile.get("include_if_any", []) if isinstance(profile, dict) else []
+    if not isinstance(include, list) or not include:
+        return False
+    lowered = source_text.lower()
+    return any(str(token).strip().lower() in lowered for token in include if str(token).strip())
+
+
+def _profile_role_lists(profile: dict[str, object]) -> tuple[list[str], list[str]]:
+    """Return include/exclude role lists for one routing profile."""
+    include = profile.get("include_roles", []) if isinstance(profile, dict) else []
+    exclude = profile.get("exclude_roles", []) if isinstance(profile, dict) else []
+    include_roles = [str(item).strip() for item in include if str(item).strip()] if isinstance(include, list) else []
+    exclude_roles = [str(item).strip() for item in exclude if str(item).strip()] if isinstance(exclude, list) else []
+    return include_roles, exclude_roles
+
+
+def _agent_questions(agent: str, score: int, applicability: str, source_text: str) -> list[str]:
+    """Build role-specific clarification questions from source evidence."""
+    evidence = _agent_evidence_line(agent, source_text)
+    evidence_suffix = f' Evidence seen: "{evidence}".' if evidence else ""
+    role_bank = _review_bank_role(agent)
+    if applicability == "not-relevant":
+        not_relevant_templates = role_bank.get("not_relevant_questions", [])
+        if isinstance(not_relevant_templates, list) and not_relevant_templates:
+            return _unique_preserve_order(
+                _render_review_templates(
+                    [str(item) for item in not_relevant_templates],
+                    {"role": agent, "evidence_suffix": evidence_suffix},
+                )
+            )
+        return [
+            f"Which explicit requirement should bring {agent} into scope for this stage?{evidence_suffix}",
+            f"Which missing artifact or stakeholder signal would justify keeping {agent} in the review set?",
+        ]
+
+    relevant_templates = role_bank.get("relevant_questions", [])
+    if isinstance(relevant_templates, list) and relevant_templates:
+        questions = _render_review_templates(
+            [str(item) for item in relevant_templates],
+            {"role": agent, "evidence_suffix": evidence_suffix},
+        )
+    else:
+        role_questions = {
+            "ux-designer": [
+                f"Which primary persona and end-to-end flow should UX optimize first?{evidence_suffix}",
+                "Which accessibility acceptance criterion must be proven before planning handoff?",
+            ],
+            "security-expert": [
+                f"Which threat scenario, trust boundary, or sensitive asset is most exposed here?{evidence_suffix}",
+                "Which mandatory control must exist before delivery can start?",
+            ],
+            "quality-expert": [
+                f"Which executable test or measurement will prove the requirement is done?{evidence_suffix}",
+                "Which quality gate is currently weakest: correctness, coverage, or reproducibility?",
+            ],
+            "platform-architect": [
+                f"Which service boundary or integration contract owns this capability?{evidence_suffix}",
+                "Which dependency must be fixed first so stories can be split cleanly?",
+            ],
+            "quantum-expert": [
+                f"Which classical baseline and comparison metric justify quantum exploration?{evidence_suffix}",
+                "Which problem slice is genuinely quantum-relevant versus classical optimization?",
+            ],
+        }
+        questions = role_questions.get(
+            agent,
+            [
+                f"Which domain-specific acceptance criterion should this expert own first?{evidence_suffix}",
+                "Which unresolved dependency still blocks delivery-ready planning?",
+            ],
+        )
+    if score <= 3:
+        low_score_template = role_bank.get("low_score_question")
+        if isinstance(low_score_template, str) and low_score_template.strip():
+            questions.append(
+                low_score_template
+                .replace("{role}", agent)
+                .replace("{evidence_suffix}", evidence_suffix)
+            )
+        else:
+            questions.append(
+                f"Which missing detail would lift the {agent} assessment from proceed-with-conditions to proceed?"
+            )
+    return _unique_preserve_order(questions)
+
+
+def _agent_missing_information(agent: str, score: int, applicability: str, source_text: str) -> list[str]:
+    """Describe role-specific gaps that still block sharper downstream planning."""
+    evidence = _agent_evidence_line(agent, source_text)
+    evidence_hint = f' Current evidence: "{evidence}".' if evidence else ""
+    role_bank = _review_bank_role(agent)
+    if applicability == "not-relevant":
+        not_relevant_gaps = role_bank.get("not_relevant_missing_information", [])
+        if isinstance(not_relevant_gaps, list) and not_relevant_gaps:
+            return _unique_preserve_order(
+                _render_review_templates(
+                    [str(item) for item in not_relevant_gaps],
+                    {"role": agent, "evidence_hint": evidence_hint},
+                )
+            )
+        return [
+            f"No explicit {agent} trigger was strong enough in the normalized source bundle.{evidence_hint}",
+            "Cross-role dependency evidence is missing for this expert domain.",
+        ]
+
+    relevant_gaps_templates = role_bank.get("relevant_missing_information", [])
+    if isinstance(relevant_gaps_templates, list) and relevant_gaps_templates:
+        role_gaps = {
+            agent: _render_review_templates(
+                [str(item) for item in relevant_gaps_templates],
+                {"role": agent, "evidence_hint": evidence_hint},
+            )
+        }
+    else:
+        role_gaps = {
+            "ux-designer": [
+                f"Primary user segment, journey step, or interaction pain is underspecified.{evidence_hint}",
+                "Accessibility and feedback-loop expectations are not yet crisp enough for implementation tasks.",
+            ],
+            "security-expert": [
+                f"Threat actor, sensitive asset, or trust boundary is not explicitly documented.{evidence_hint}",
+                "Required preventative and detective controls are still implicit.",
+            ],
+            "quality-expert": [
+                f"Verification evidence and pass/fail thresholds are still too implicit.{evidence_hint}",
+                "The path from acceptance criteria to executable tests is not fully mapped.",
+            ],
+            "platform-architect": [
+                f"System boundaries and integration ownership need sharper decomposition.{evidence_hint}",
+                "Operational dependencies are not yet translated into delivery-safe sequencing.",
+            ],
+            "quantum-expert": [
+                f"Quantum applicability lacks a fully explicit baseline and evaluation envelope.{evidence_hint}",
+                "The handoff between classical and quantum-inspired methods is not yet bounded tightly enough.",
+            ],
+        }
+    if score >= 4:
+        return [
+            role_gaps.get(agent, [f"Residual {agent} assumptions should still be tracked for planning." + evidence_hint])[0],
+            "No blocking information gaps remain, but assumptions should stay visible in planning artifacts.",
+        ]
+    return role_gaps.get(
+        agent,
+        [
+            f"Task-level implementation detail is too thin for reliable execution.{evidence_hint}",
+            "Owner handoff criteria require sharper boundaries.",
+        ],
+    )
+
+
+def _agent_finding(agent: str, applicability: str, source_text: str) -> str:
+    """Return a concise, evidence-based key finding for review summaries."""
+    evidence = _agent_evidence_line(agent, source_text)
+    role_bank = _review_bank_role(agent)
+    finding_template = role_bank.get("finding_template")
+    if isinstance(finding_template, str) and finding_template.strip():
+        return (
+            finding_template.replace("{role}", agent)
+            .replace("{applicability}", applicability)
+            .replace("{evidence}", evidence)
+        )
+    if applicability == "not-relevant":
+        return f"{agent} found no strong domain signal in the current normalized bundle."
+    if evidence:
+        return f"{agent} anchored its assessment on: {evidence}"
+    return f"{agent} assessed the source block as relevant but still needs sharper evidence."
+
+
 def _score_agent_review(agent: str, source_text: str) -> tuple[int, str, str]:
     """Return (score, recommendation, applicability)."""
     lower = source_text.lower()
     keywords = _agent_keyword_map().get(agent, ())
     hits = sum(1 for key in keywords if key in lower)
+    applicability = "relevant" if hits > 0 else "not-relevant"
 
-    if hits == 0:
-        return 3, "proceed-with-conditions", "not-relevant"
+    role_cfg = _routing_role_config(agent)
+    score_bias = int(role_cfg.get("score_bias", 0)) if isinstance(role_cfg, dict) else 0
+    min_score = int(role_cfg.get("min_score", 2)) if isinstance(role_cfg, dict) else 2
+    max_score = int(role_cfg.get("max_score", 5)) if isinstance(role_cfg, dict) else 5
 
-    if hits >= 3:
-        return 4, "proceed", "relevant"
-    if hits >= 1:
-        return 3, "proceed-with-conditions", "relevant"
-    return 2, "stop-and-clarify", "relevant"
+    specificity_tokens = _scoring_specificity_tokens()
+    specificity_hits = sum(1 for token in specificity_tokens if token in lower)
+
+    role_bonus_tokens = _scoring_role_bonus_tokens(agent)
+    role_bonus_hits = sum(1 for token in role_bonus_tokens if token in lower)
+    role_bonus = 2 if role_bonus_hits >= 3 else 1 if role_bonus_hits >= 1 else 0
+
+    if applicability == "not-relevant":
+        score = 2 + score_bias
+    else:
+        score = 2 + min(2, hits) + (1 if specificity_hits >= 2 else 0) + role_bonus + score_bias
+
+    score = max(min_score, min(max_score, score))
+
+    if score >= 4:
+        recommendation = "proceed"
+    elif score == 3:
+        recommendation = "proceed-with-conditions"
+    else:
+        recommendation = "stop-and-clarify"
+    return score, recommendation, applicability
 
 
 def _select_relevant_review_agents(
@@ -509,7 +922,25 @@ def _select_relevant_review_agents(
     selected: list[str] = []
     skipped: list[str] = []
 
+    forced_include: list[str] = []
+    forced_exclude: list[str] = []
+    for profile in _routing_profiles().values():
+        if _profile_is_active(profile, source_text):
+            include_roles, exclude_roles = _profile_role_lists(profile)
+            forced_include.extend(include_roles)
+            forced_exclude.extend(exclude_roles)
+
+    forced_include = _unique_preserve_order(forced_include)
+    forced_exclude = _unique_preserve_order(forced_exclude)
+
     for agent in candidates:
+        if agent in forced_exclude:
+            skipped.append(agent)
+            continue
+        if agent in forced_include:
+            selected.append(agent)
+            continue
+
         _, _, applicability = _score_agent_review(agent, source_text)
         if applicability == "relevant":
             selected.append(agent)
@@ -535,6 +966,34 @@ def _confidence_label(score: int) -> str:
     return "low"
 
 
+def _replace_markdown_section(markdown_text: str, heading: str, body_lines: list[str]) -> str:
+    """Replace one level-2 markdown section body while preserving heading order."""
+    body = "\n".join(body_lines).rstrip()
+    section = f"## {heading}\n\n{body}\n"
+    pattern = re.compile(rf"## {re.escape(heading)}\n.*?(?=\n## |\Z)", flags=re.DOTALL)
+    if pattern.search(markdown_text):
+        return pattern.sub(section, markdown_text)
+    return markdown_text.rstrip() + "\n\n" + section
+
+
+def _quantum_algorithm_topics(source_text: str) -> list[str]:
+    """Extract up to three quantum algorithm topics from source text."""
+    catalog, defaults = _quantum_topic_catalog()
+    lowered = source_text.lower()
+    topics = [label for token, label in catalog if token in lowered]
+    for fallback in defaults:
+        if len(topics) >= 3:
+            break
+        if fallback not in topics:
+            topics.append(fallback)
+    return topics[:3]
+
+
+def _yaml_safe(value: str) -> str:
+    """Return a YAML-safe double-quoted scalar."""
+    return '"' + value.replace("\\", "\\\\").replace('"', "'") + '"'
+
+
 def _review_scenario(score: int, recommendation: str, applicability: str) -> tuple[str, str]:
     """Return scenario classification and rationale for review artifacts."""
     if recommendation == "stop-and-clarify" or score <= 2:
@@ -553,7 +1012,12 @@ def _review_scenario(score: int, recommendation: str, applicability: str) -> tup
     )
 
 
-def _agent_mapping_contract(agent: str, score: int, applicability: str) -> dict[str, object]:
+def _agent_mapping_contract(
+    agent: str,
+    score: int,
+    applicability: str,
+    source_text: str,
+) -> dict[str, object]:
     """Return expert-to-coach mapping contract for story/task formulability."""
     role = agent.strip().lower()
     if applicability == "not-relevant":
@@ -564,14 +1028,8 @@ def _agent_mapping_contract(agent: str, score: int, applicability: str) -> dict[
                 "Domain trigger keywords for this expert role",
                 "Concrete scope signal tied to stage goals",
             ],
-            "missing_information": [
-                f"No strong {role} signal found in normalized source bundle.",
-                "Cross-role dependency evidence is missing for this domain.",
-            ],
-            "questions": [
-                f"Which explicit requirement should be owned by {role} in this stage?",
-                "Should this review role be skipped for this bundle in future runs?",
-            ],
+            "missing_information": _agent_missing_information(role, score, applicability, source_text),
+            "questions": _agent_questions(role, score, applicability, source_text),
         }
 
     base_required = [
@@ -592,18 +1050,8 @@ def _agent_mapping_contract(agent: str, score: int, applicability: str) -> dict[
         "can_story": "yes",
         "can_task": can_task,
         "required_fields": required_fields,
-        "missing_information": (
-            [
-                "Task-level implementation detail is too thin for reliable execution.",
-                "Owner handoff criteria require sharper boundaries.",
-            ]
-            if can_task == "no"
-            else ["No blocking information gaps from this expert perspective."]
-        ),
-        "questions": [
-            "Which acceptance criterion should become the first executable task?",
-            "Who is the final owner for unresolved domain-specific blockers?",
-        ],
+        "missing_information": _agent_missing_information(role, score, applicability, source_text),
+        "questions": _agent_questions(role, score, applicability, source_text),
     }
 
 
@@ -613,6 +1061,7 @@ def _agent_review_markdown(
     stage: str,
     agent: str,
     bundle,
+    source_text: str,
     score: int,
     recommendation: str,
     applicability: str,
@@ -641,7 +1090,9 @@ def _agent_review_markdown(
     response_rel = response_path.as_posix()
     spec_rel = agent_spec_path.as_posix()
     scenario, scenario_rationale = _review_scenario(score, recommendation, applicability)
-    mapping = _agent_mapping_contract(agent, score, applicability)
+    mapping = _agent_mapping_contract(agent, score, applicability, source_text)
+    missing_information = [str(item) for item in mapping.get("missing_information", [])]
+    clarification_questions = [str(item) for item in mapping.get("questions", [])]
 
     scenario_output = {
         "cannot-start": [
@@ -686,27 +1137,66 @@ def _agent_review_markdown(
         "- Coverage assessment: incomplete / partial / sufficient",
         "- Coverage assessment: sufficient" if score >= 4 else "- Coverage assessment: partial",
     )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Missing Information",
+        [f"- {item}" for item in missing_information] or ["- No blocking information gaps were identified."],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Questions for Clarification",
+        [f"- {item}" for item in clarification_questions] or ["- No blocking clarification questions remain."],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Scenario Classification",
+        [
+            f"- scenario: {scenario}",
+            f"- scenario_rationale: {scenario_rationale}",
+        ],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Story/Task Mapping (Expert -> Agile Coach)",
+        [
+            f"- can_formulate_story: {mapping['can_story']}",
+            f"- can_formulate_task: {mapping['can_task']}",
+            "- required_fields:",
+            *[f"  - {item}" for item in mapping["required_fields"]],
+            "- coach_feedback_missing_information:",
+            *[f"  - {item}" for item in missing_information],
+            "- coach_feedback_questions:",
+            *[f"  - {item}" for item in clarification_questions],
+        ],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Dynamic Output (Scenario-specific)",
+        [
+            f"### {scenario}",
+            "",
+            *scenario_output[scenario],
+            *(
+                ["", "- not_relevant_reason: Domain trigger evidence is currently too weak for mandatory scope inclusion."]
+                if applicability == "not-relevant"
+                else []
+            ),
+        ],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Readiness Assessment",
+        [
+            f"- decision: {recommendation}",
+            "- blocking_items:",
+            "  - none" if recommendation == "proceed" else "  - Clarify open questions before planning freeze",
+            f"- rationale: {scenario_rationale}",
+        ],
+    )
     rendered += "\n\n## Handoff Trace\n"
     rendered += f"- expert_request: {request_rel}\n"
     rendered += f"- expert_response: {response_rel}\n"
     rendered += f"- applicability: {applicability}\n"
-    rendered += "\n## Scenario Classification\n"
-    rendered += f"- scenario: {scenario}\n"
-    rendered += f"- scenario_rationale: {scenario_rationale}\n"
-    rendered += "\n## Story/Task Mapping (Expert -> Agile Coach)\n"
-    rendered += f"- can_formulate_story: {mapping['can_story']}\n"
-    rendered += f"- can_formulate_task: {mapping['can_task']}\n"
-    rendered += "- required_fields:\n"
-    rendered += "\n".join(f"  - {item}" for item in mapping["required_fields"]) + "\n"
-    rendered += "- coach_feedback_missing_information:\n"
-    rendered += "\n".join(f"  - {item}" for item in mapping["missing_information"]) + "\n"
-    rendered += "- coach_feedback_questions:\n"
-    rendered += "\n".join(f"  - {item}" for item in mapping["questions"]) + "\n"
-    rendered += "\n## Dynamic Output (Scenario-specific)\n"
-    rendered += f"### {scenario}\n\n"
-    rendered += "\n".join(scenario_output[scenario]) + "\n"
-    if applicability == "not-relevant":
-        rendered += "- not_relevant_reason: UX focus not required by current source evidence.\n"
     return rendered
 
 
@@ -730,10 +1220,7 @@ def _expert_request_yaml(
         "Source bundle is normalized to English and can be evaluated holistically.",
         "Review should include explicit recommendation and confidence.",
     ]
-    questions = [
-        "Which stage criteria are currently satisfied from your domain perspective?",
-        "Which blockers or risks prevent progression?",
-    ]
+    questions = _agent_questions(to_role, 3, "relevant", source_markdown)
 
     artifact_lines = (
         source_artifacts
@@ -752,24 +1239,24 @@ def _expert_request_yaml(
     return "\n".join(
         [
             "schema: expert_request_v1",
-            f'request_id: "{request_id}"',
-            'from_role: "agile-coach"',
-            f'to_role: "{to_role}"',
-            f'goal: "Assess {bundle_id(bundle)} for stage {stage} and provide recommendation with confidence score."',
+            f"request_id: {_yaml_safe(request_id)}",
+            f"from_role: {_yaml_safe('agile-coach')}",
+            f"to_role: {_yaml_safe(to_role)}",
+            f"goal: {_yaml_safe(f'Assess {bundle_id(bundle)} for stage {stage} and provide recommendation with confidence score.')}",
             "current_state:",
-            f'  stage: "{stage}"',
-            f'  bundle: "{bundle_id(bundle)}"',
+            f"  stage: {_yaml_safe(stage)}",
+            f"  bundle: {_yaml_safe(bundle_id(bundle))}",
             "  artifacts:",
-            *[f'    - "{path}"' for path in artifact_lines],
+            *[f"    - {_yaml_safe(path)}" for path in artifact_lines],
             "context:",
-            *[f'  - "{entry}"' for entry in context_lines],
+            *[f"  - {_yaml_safe(entry)}" for entry in context_lines],
             "assumptions:",
-            *[f'  - "{entry}"' for entry in assumptions],
+            *[f"  - {_yaml_safe(entry)}" for entry in assumptions],
             "open_questions:",
-            *[f'  - "{entry}"' for entry in questions],
+            *[f"  - {_yaml_safe(entry)}" for entry in questions],
             "artifacts:",
-            f'  - "stage_instruction: {stage_instruction}"',
-            *[f'  - "source_note: {line}"' for line in notes],
+            f"  - {_yaml_safe(f'stage_instruction: {stage_instruction}')}",
+            *[f"  - {_yaml_safe(f'source_note: {line}')}" for line in notes],
         ]
     )
 
@@ -797,30 +1284,27 @@ def _expert_response_yaml(
         "Assessment is based on currently available source evidence.",
         "Cross-team dependencies may adjust final planning structure.",
     ]
-    questions = [
-        "Are there unresolved cross-bundle dependencies affecting this recommendation?",
-        "Should additional stakeholder clarification be requested before planning?",
-    ]
+    questions = _agent_questions(from_role, score, "relevant", review_path.read_text(encoding="utf-8") if review_path.exists() else "")
 
     return "\n".join(
         [
             "schema: expert_response_v1",
-            f'request_id: "{request_id}"',
-            f'from_role: "{from_role}"',
-            'to_role: "agile-coach"',
-            f'summary: "{summary}"',
+            f"request_id: {_yaml_safe(request_id)}",
+            f"from_role: {_yaml_safe(from_role)}",
+            f"to_role: {_yaml_safe('agile-coach')}",
+            f"summary: {_yaml_safe(summary)}",
             f"confidence: {confidence}",
             "recommendations:",
-            *[f'  - "{entry}"' for entry in recs],
+            *[f"  - {_yaml_safe(entry)}" for entry in recs],
             "assumptions:",
-            *[f'  - "{entry}"' for entry in assumptions],
+            *[f"  - {_yaml_safe(entry)}" for entry in assumptions],
             "open_questions:",
-            *[f'  - "{entry}"' for entry in questions],
+            *[f"  - {_yaml_safe(entry)}" for entry in questions],
             "artifacts:",
-            f'  - "review: {review_path.as_posix()}"',
-            f'  - "spec: {spec_path.as_posix()}"',
-            f'  - "score: {score}"',
-            f'  - "recommendation: {recommendation}"',
+            f"  - {_yaml_safe(f'review: {review_path.as_posix()}')}",
+            f"  - {_yaml_safe(f'spec: {spec_path.as_posix()}')}",
+            f"  - {_yaml_safe(f'score: {score}')}",
+            f"  - {_yaml_safe(f'recommendation: {recommendation}')}",
         ]
     )
 
@@ -957,37 +1441,77 @@ def _cumulated_review_markdown(
         f"- recommendation: {recommendation}",
     )
     rendered = rendered.replace("- confidence_score: 1-5", f"- confidence_score: {avg}")
-    rendered += "\n\n## Agent Summary\n"
-    rendered += "| Agent | Recommendation | Confidence | Key Finding |\n"
-    rendered += "|-------|------------------|------------|-------------|\n"
-    rendered += summary_rows + "\n"
+    rendered = _replace_markdown_section(
+        rendered,
+        "Consensus",
+        [
+            "- Expert reviews agree that planning can proceed when scope and acceptance evidence stay explicit.",
+            "- Confidence and recommendations are consolidated and must be preserved in planning artifacts.",
+        ],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Open Questions",
+        [f"- {q}" for q in open_questions],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Gap Analysis",
+        [f"- {item}" for item in gap_analysis],
+    )
 
-    rendered += "\n\n## Open Questions\n"
-    rendered += "\n".join(f"- {q}" for q in open_questions)
-    rendered += "\n"
-    rendered += "\n## Gap Analysis\n"
-    rendered += "\n".join(f"- {item}" for item in gap_analysis)
-    rendered += "\n"
-    rendered += "\n## Expert Scope Filter\n"
+    scope_filter_lines: list[str] = []
     if skipped:
-        rendered += "Skipped expert roles for this source block:\n"
-        rendered += "\n".join(f"- {agent}" for agent in skipped)
-        rendered += "\n"
+        scope_filter_lines.append("Skipped expert roles for this source block:")
+        scope_filter_lines.extend(f"- {agent}" for agent in skipped)
     else:
-        rendered += "- All configured expert roles were relevant for this source block.\n"
-    rendered += "\n## Scenario Classification\n"
-    rendered += f"- scenario: {scenario}\n"
-    rendered += f"- scenario_rationale: {scenario_rationale}\n"
-    rendered += "\n## Dynamic Output (Scenario-specific)\n"
+        scope_filter_lines.append("- All configured expert roles were relevant for this source block.")
+
+    rendered = _replace_markdown_section(
+        rendered,
+        "Agent Review Summary",
+        [
+            "| Agent | Recommendation | Confidence | Key Finding |",
+            "|-------|------------------|------------|-------------|",
+            *summary_rows.splitlines(),
+        ],
+    )
+    rendered = _replace_markdown_section(
+        rendered,
+        "Scenario Classification",
+        [
+            f"- scenario: {scenario}",
+            f"- scenario_rationale: {scenario_rationale}",
+        ],
+    )
+
+    dynamic_lines: list[str]
     if scenario == "cannot-start":
-        rendered += "### cannot-start\n\n"
-        rendered += "- Checklist, scoring, and targeted clarification questions are required before planning.\n"
+        dynamic_lines = [
+            "### cannot-start",
+            "",
+            "- Checklist, scoring, and targeted clarification questions are required before planning.",
+        ]
     elif scenario == "completed":
-        rendered += "### completed\n\n"
-        rendered += "- Focus on optimization questions and additional feature opportunities.\n"
+        dynamic_lines = [
+            "### completed",
+            "",
+            "- Focus on optimization questions and additional feature opportunities.",
+        ]
     else:
-        rendered += "### startable\n\n"
-        rendered += "- Provide checklist, scoring, and feature suggestions for immediate project launch.\n"
+        dynamic_lines = [
+            "### startable",
+            "",
+            "- Provide checklist, scoring, and feature suggestions for immediate project launch.",
+        ]
+
+    rendered = _replace_markdown_section(
+        rendered,
+        "Dynamic Output (Scenario-specific)",
+        dynamic_lines,
+    )
+    rendered += "\n\n## Expert Scope Filter\n"
+    rendered += "\n".join(scope_filter_lines) + "\n"
     return rendered
 
 
@@ -1150,7 +1674,7 @@ def _process_review_block(
         response_path = handoff_dir / f"{request_id}.expert_response.yaml"
 
         score, recommendation, applicability = _score_agent_review(agent, combined_source)
-        mapping = _agent_mapping_contract(agent, score, applicability)
+        mapping = _agent_mapping_contract(agent, score, applicability, combined_source)
         agent_spec_path = _agent_spec_path(spec_root, block_bundle, agent)
         agent_review_path = agent_review_dir / f"{block_bundle.item_code}.{agent}.review.md"
 
@@ -1203,6 +1727,7 @@ def _process_review_block(
                 stage=stage,
                 agent=agent,
                 bundle=block_bundle,
+                source_text=combined_source,
                 score=score,
                 recommendation=recommendation,
                 applicability=applicability,
@@ -1211,6 +1736,52 @@ def _process_review_block(
                 agent_spec_path=agent_spec_path,
             ),
         )
+
+        if agent == "quantum-expert":
+            for topic in _quantum_algorithm_topics(combined_source):
+                topic_slug = re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
+                topic_request_id = f"{request_id}-{topic_slug}"
+                topic_request_path = handoff_dir / f"{topic_request_id}.expert_request.yaml"
+                topic_response_path = handoff_dir / f"{topic_request_id}.expert_response.yaml"
+
+                topic_request_exists = topic_request_path.exists()
+                topic_response_exists = topic_response_path.exists()
+
+                topic_source = (
+                    f"Topic focus: {topic}\n"
+                    "Assess algorithm applicability, baseline comparison expectations, and evaluation criteria.\n\n"
+                    f"{combined_source}"
+                )
+
+                ensure_text(
+                    topic_request_path,
+                    _expert_request_yaml(
+                        request_id=topic_request_id,
+                        to_role=agent,
+                        stage=stage,
+                        bundle=block_bundle,
+                        source_markdown=topic_source,
+                        stage_instruction=stage_instruction_ref,
+                        source_artifacts=source_artifacts,
+                    ),
+                )
+                ensure_text(
+                    topic_response_path,
+                    _expert_response_yaml(
+                        request_id=topic_request_id,
+                        from_role=agent,
+                        stage=stage,
+                        bundle=block_bundle,
+                        score=score,
+                        recommendation=recommendation,
+                        review_path=agent_review_path,
+                        spec_path=agent_spec_path,
+                    ),
+                )
+
+                touched_count += 2
+                created_count += (0 if topic_request_exists else 1)
+                created_count += (0 if topic_response_exists else 1)
 
         touched_count += 4
         created_count += (0 if request_exists else 1)
@@ -1223,7 +1794,7 @@ def _process_review_block(
                 "agent": agent,
                 "score": score,
                 "recommendation": recommendation,
-                "finding": f"{agent} assessed the full source block as {applicability}",
+                "finding": _agent_finding(agent, applicability, combined_source),
                 "missing_information": list(mapping.get("missing_information", [])),
                 "questions": list(mapping.get("questions", [])),
             }

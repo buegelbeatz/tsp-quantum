@@ -17,6 +17,6 @@ layer: digital-generic-team
 - extraction_engine: {{EXTRACTION_ENGINE}}
 - extraction_status: {{EXTRACTION_STATUS}}
 
-## Extracted Content (Normalized)
+## Bundle Content
 
 {{CONTENT_BODY}}

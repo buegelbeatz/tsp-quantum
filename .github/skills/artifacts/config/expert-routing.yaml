@@ -1,0 +1,245 @@
+---
+layer: digital-generic-team
+schema: expert_routing_v1
+version: 1
+
+scoring:
+  specificity_tokens:
+    - baseline
+    - metric
+    - acceptance
+    - constraint
+    - owner
+    - risk
+    - evidence
+    - evaluation
+  role_bonus_tokens:
+    quantum-expert:
+      - qaoa
+      - vqe
+      - qubo
+      - quantum annealing
+      - grover
+      - qiskit
+      - classical baseline
+    quality-expert:
+      - test
+      - reproducible
+      - reproducibility
+      - validation
+      - benchmark
+      - notebook
+    ux-designer:
+      - user
+      - ux
+      - readability
+      - visualization
+      - explainability
+
+topic_catalog:
+  quantum_algorithms:
+    token_to_label:
+      - token: qaoa
+        label: QAOA
+      - token: vqe
+        label: VQE
+      - token: qubo
+        label: QUBO
+      - token: quantum annealing
+        label: Quantum Annealing
+      - token: grover
+        label: Grover-style Search
+      - token: qiskit
+        label: Qiskit Circuit Workflow
+    defaults:
+      - QAOA
+      - VQE
+      - Quantum Annealing
+
+domain_profiles:
+  notebook-analysis:
+    include_if_any:
+      - notebook
+      - jupyter
+      - ipynb
+    include_roles:
+      - quality-expert
+      - ux-designer
+      - ai-expert
+
+  quantum-optimization:
+    include_if_any:
+      - quantum
+      - qubit
+      - qaoa
+      - vqe
+      - qubo
+      - qiskit
+    include_roles:
+      - quantum-expert
+      - quality-expert
+      - ai-expert
+    exclude_roles:
+      - kubernetes-expert
+      - container-expert
+
+  platform-infrastructure:
+    include_if_any:
+      - platform
+      - architecture
+      - integration
+      - kubernetes
+      - k3s
+      - cluster
+      - helm
+      - namespace
+      - container
+      - docker
+      - podman
+    include_roles:
+      - platform-architect
+      - kubernetes-expert
+      - container-expert
+      - quality-expert
+
+  security-sensitive:
+    include_if_any:
+      - security
+      - threat
+      - privacy
+      - token
+      - secret
+      - auth
+      - owasp
+    include_roles:
+      - security-expert
+      - quality-expert
+
+  mcp-integration:
+    include_if_any:
+      - mcp
+      - tool registry
+      - protocol
+      - transport
+    include_roles:
+      - mcp-expert
+      - platform-architect
+      - quality-expert
+
+roles:
+  quantum-expert:
+    focus: Quantum relevance assessment with algorithm-specific evidence and baseline comparison
+    keywords:
+      - quantum
+      - qaoa
+      - vqe
+      - qubo
+      - annealing
+      - qiskit
+      - qubit
+
+    min_score: 2
+    max_score: 5
+    score_bias: 0
+
+  quality-expert:
+    focus: Reproducibility, test strategy, and evidence-based acceptance validation
+    keywords:
+      - quality
+      - reproducible
+      - reproducibility
+      - test
+      - validation
+      - acceptance
+      - benchmark
+      - metric
+    min_score: 2
+    max_score: 5
+    score_bias: 0
+
+  ux-designer:
+    focus: Explainability, readability, and audience-appropriate visual communication
+    keywords:
+      - user
+      - ux
+      - interpretability
+      - explainability
+      - visualization
+      - non-experts
+      - readability
+    min_score: 2
+    max_score: 5
+    score_bias: 0
+
+  ai-expert:
+    focus: AI/ML method suitability, model assumptions, and comparative evaluation quality
+    keywords:
+      - ai
+      - model
+      - optimization
+      - heuristic
+      - benchmark
+      - baseline
+    min_score: 2
+    max_score: 5
+    score_bias: 0
+
+  security-expert:
+    focus: Risk model, data-handling safeguards, and abuse resistance
+    keywords:
+      - security
+      - privacy
+      - risk
+      - threat
+      - token
+      - secret
+    min_score: 2
+    max_score: 5
+    score_bias: 0
+
+  platform-architect:
+    focus: Architecture boundaries and integration dependencies
+    keywords:
+      - architecture
+      - platform
+      - system
+      - service
+      - integration
+    min_score: 2
+    max_score: 5
+    score_bias: -1
+
+  kubernetes-expert:
+    focus: Cluster operability and deployment topology
+    keywords:
+      - kubernetes
+      - k3s
+      - cluster
+      - helm
+      - namespace
+    min_score: 1
+    max_score: 5
+    score_bias: -1
+
+  container-expert:
+    focus: Containerization and runtime portability
+    keywords:
+      - container
+      - docker
+      - image
+      - runtime
+      - podman
+    min_score: 1
+    max_score: 5
+    score_bias: -1
+
+  mcp-expert:
+    focus: MCP interface design and tool runtime contracts
+    keywords:
+      - mcp
+      - tool registry
+      - protocol
+      - transport
+    min_score: 1
+    max_score: 5
+    score_bias: -1

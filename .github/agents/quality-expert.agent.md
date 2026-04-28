@@ -21,6 +21,13 @@ Provide focused quality recommendations for testing, maintainability, review ris
 - Keep feedback concrete and risk-oriented.
 - Always provide a confidence level.
 - Prioritize deterministic remediation order for hard-fail quality gates before warning-level findings.
+- Keep review question and gap wording aligned with template-owned language (no ad-hoc inline question banks).
+
+## Review Language Source
+
+- Baseline wording source:
+	- `.github/skills/artifacts/templates/digital-artifacts/30-specification/REVIEW_QUESTION_BANK.yaml`
+- Quality-specific details may extend this baseline but must not contradict it.
 
 ## Derived Agents
 - Inherits the generic-expert consultation model.

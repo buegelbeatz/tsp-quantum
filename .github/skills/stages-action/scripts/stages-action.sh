@@ -16,6 +16,34 @@ BOARD_CLEANUP_SCRIPT="$REPO_ROOT/.github/skills/board/scripts/board-cleanup.sh"
 MARKDOWN_ARTIFACTS_CONFIG="$REPO_ROOT/.github/skills/artifacts/config/markdown-artifacts.env"
 PATH_GUARD_LIB="$REPO_ROOT/.github/skills/shared/shell/scripts/lib/path_guard.sh"
 
+TARGET_REPO_ROOT_EFFECTIVE="${TARGET_REPO_ROOT:-${DIGITAL_TARGET_REPO_ROOT:-}}"
+if [[ -n "$TARGET_REPO_ROOT_EFFECTIVE" ]]; then
+  TARGET_REPO_ROOT_EFFECTIVE="$(cd "$TARGET_REPO_ROOT_EFFECTIVE" && pwd)"
+  if [[ "${STAGES_ACTION_DELEGATED:-0}" != "1" && "$TARGET_REPO_ROOT_EFFECTIVE" != "$REPO_ROOT" ]]; then
+    target_stages_action_script="$TARGET_REPO_ROOT_EFFECTIVE/.github/skills/stages-action/scripts/stages-action.sh"
+    if [[ ! -f "$target_stages_action_script" ]]; then
+      echo "[stages-action] ERROR: target stages-action script missing at ${target_stages_action_script}"
+      exit 2
+    fi
+    echo "[stages-action] INFO: delegating execution to target repository: ${TARGET_REPO_ROOT_EFFECTIVE}"
+    exec env \
+      STAGES_ACTION_DELEGATED=1 \
+      TARGET_REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE" \
+      DIGITAL_TARGET_REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE" \
+      TARGET_REPO_SLUG="${TARGET_REPO_SLUG:-${DIGITAL_TARGET_REPO_SLUG:-}}" \
+      DIGITAL_TARGET_REPO_SLUG="${DIGITAL_TARGET_REPO_SLUG:-${TARGET_REPO_SLUG:-}}" \
+      bash "$target_stages_action_script" "$@"
+  fi
+  REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE"
+  ARTIFACTS_SCRIPTS_DIR="$REPO_ROOT/.github/skills/artifacts/scripts"
+  SHARED_GITHUB_LIB="$REPO_ROOT/.github/skills/shared/shell/scripts/lib/github.sh"
+  CHECK_DELIVERY_WORK_SCRIPT="$REPO_ROOT/.github/skills/stages-action/scripts/check-delivery-work.sh"
+  VALIDATE_SVG_ASSETS_SCRIPT="$REPO_ROOT/.github/skills/stages-action/scripts/validate-svg-assets.sh"
+  BOARD_CLEANUP_SCRIPT="$REPO_ROOT/.github/skills/board/scripts/board-cleanup.sh"
+  MARKDOWN_ARTIFACTS_CONFIG="$REPO_ROOT/.github/skills/artifacts/config/markdown-artifacts.env"
+  PATH_GUARD_LIB="$REPO_ROOT/.github/skills/shared/shell/scripts/lib/path_guard.sh"
+fi
+
 _resolve_python_runtime() {
   local candidate
   for candidate in \
@@ -85,8 +113,21 @@ _elapsed_seconds() {
   echo "$((now - RUN_START_EPOCH))"
 }
 
-_project_powerpoint_source_relpath() {
-  echo "docs/powerpoints/digital-generic-team_project.pptx"
+_stage_powerpoint_source_relpath() {
+  local stage_name="${1:-$STAGE}"
+  local layer_id
+  layer_id="$(_active_layer_id)"
+  echo "docs/powerpoints/${layer_id}_${stage_name}.pptx"
+}
+
+_active_layer_id() {
+  local configured
+  configured="${DIGITAL_LAYER_ID:-${DIGITAL_TEAM_LAYER_ID:-}}"
+  if [[ -n "$configured" ]]; then
+    echo "$configured"
+    return 0
+  fi
+  basename "$REPO_ROOT"
 }
 
 _cleanup_legacy_markdown_aliases() {
@@ -187,8 +228,34 @@ _ticket_record_for_id() {
   printf '%s\n' "$ticket_records" | awk -F '\t' -v id="$ticket_id" '$1 == id { print; exit }'
 }
 
-_project_wiki_powerpoint_relpath() {
-  echo "docs/wiki/assets/Project-Summary.pptx"
+_stage_label_titlecase() {
+  local stage_name="$1"
+  printf '%s\n' "$stage_name" | awk -F'-' '{
+    for (i = 1; i <= NF; i++) {
+      part = $i
+      if (part == "") {
+        continue
+      }
+      printf toupper(substr(part, 1, 1)) substr(part, 2)
+      if (i < NF) {
+        printf "-"
+      }
+    }
+    printf "\n"
+  }'
+}
+
+_stage_wiki_powerpoint_relpath() {
+  local stage_name="${1:-$STAGE}"
+  local stage_title
+
+  if [[ "$stage_name" == "project" ]]; then
+    echo "docs/wiki/assets/Project-Summary.pptx"
+    return 0
+  fi
+
+  stage_title="$(_stage_label_titlecase "$stage_name")"
+  echo "docs/wiki/assets/${stage_title}-Summary.pptx"
 }
 
 _work_item_id_for_board_ticket() {
@@ -327,7 +394,7 @@ _project_github_wiki_status() {
 
   local_stage_file="$REPO_ROOT/docs/wiki/Project.md"
   cached_stage_file="$wiki_cache_dir/Project.md"
-  local_ppt_file="$REPO_ROOT/$(_project_wiki_powerpoint_relpath)"
+  local_ppt_file="$REPO_ROOT/$(_stage_wiki_powerpoint_relpath "$STAGE")"
 
   stage_sync_status="pending"
   ppt_sync_status="pending"
@@ -982,6 +1049,14 @@ EOF
 }
 
 _resolve_github_repo_slug() {
+  if [[ -n "${TARGET_REPO_SLUG:-}" ]]; then
+    printf '%s' "$TARGET_REPO_SLUG"
+    return 0
+  fi
+  if [[ -n "${DIGITAL_TARGET_REPO_SLUG:-}" ]]; then
+    printf '%s' "$DIGITAL_TARGET_REPO_SLUG"
+    return 0
+  fi
   local remote_url
   remote_url="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
   [[ -n "$remote_url" ]] || { printf ''; return 0; }
@@ -1074,8 +1149,8 @@ _enforce_mandatory_primary_sync_gate() {
   if [[ "$STAGE" == "project" ]]; then
     local ppt_source_path ppt_wiki_path ppt_source_sha256 ppt_wiki_sha256 ppt_remote_count
 
-    ppt_source_path="$REPO_ROOT/$(_project_powerpoint_source_relpath)"
-    ppt_wiki_path="$REPO_ROOT/$(_project_wiki_powerpoint_relpath)"
+    ppt_source_path="$REPO_ROOT/$(_stage_powerpoint_source_relpath "$STAGE")"
+    ppt_wiki_path="$REPO_ROOT/$(_stage_wiki_powerpoint_relpath "$STAGE")"
     if [[ ! -f "$ppt_source_path" || ! -f "$ppt_wiki_path" ]]; then
       echo "[stages-action] ERROR: mandatory GitHub sync gate failed: local PowerPoint artifacts are incomplete"
       return 1
@@ -1342,8 +1417,8 @@ _write_stage_completion_report() {
 
   local github_issue_open_total github_wiki_status github_wiki_url
 
-  ppt_wiki_path="$(_project_wiki_powerpoint_relpath)"
-  ppt_source_path="$(_project_powerpoint_source_relpath)"
+  ppt_wiki_path="$(_stage_wiki_powerpoint_relpath "$STAGE")"
+  ppt_source_path="$(_stage_powerpoint_source_relpath "$STAGE")"
   ppt_wiki_exists="false"
   ppt_source_exists="false"
   ppt_wiki_sha256="missing"
@@ -1540,8 +1615,8 @@ _print_stage_completion_brief() {
   github_wiki_url="none"
   workflow_code_debt_delta="n/a"
   workflow_code_debt_monotonic_status="unknown"
-  ppt_source_path="$(_project_powerpoint_source_relpath)"
-  ppt_wiki_path="$(_project_wiki_powerpoint_relpath)"
+  ppt_source_path="$(_stage_powerpoint_source_relpath "$STAGE")"
+  ppt_wiki_path="$(_stage_wiki_powerpoint_relpath "$STAGE")"
 
   if [[ -n "$stage_completion_file" && -f "$stage_completion_file" ]]; then
     board_backlog="$(grep -E '^- board_backlog:' "$stage_completion_file" 2>/dev/null | head -n1 | sed -E 's/^- board_backlog:[[:space:]]*//' | tr -d '"' || true)"
@@ -1584,8 +1659,8 @@ _print_stage_completion_brief() {
   [[ -n "$github_wiki_url" ]] || github_wiki_url="none"
   [[ -n "$workflow_code_debt_delta" ]] || workflow_code_debt_delta="n/a"
   [[ -n "$workflow_code_debt_monotonic_status" ]] || workflow_code_debt_monotonic_status="unknown"
-  [[ -n "$ppt_source_path" ]] || ppt_source_path="$(_project_powerpoint_source_relpath)"
-  [[ -n "$ppt_wiki_path" ]] || ppt_wiki_path="$(_project_wiki_powerpoint_relpath)"
+  [[ -n "$ppt_source_path" ]] || ppt_source_path="$(_stage_powerpoint_source_relpath "$STAGE")"
+  [[ -n "$ppt_wiki_path" ]] || ppt_wiki_path="$(_stage_wiki_powerpoint_relpath "$STAGE")"
   open_total=$((board_backlog + board_in_progress + board_blocked))
 
   backlog_reason_lines="$(_board_ticket_reason_lines backlog)"
@@ -1895,12 +1970,12 @@ _run_project_powerpoint_post_gate() {
   prompt_invoke_script="$REPO_ROOT/.github/hooks/prompt-invoke.sh"
   powerpoint_script="$REPO_ROOT/.github/skills/powerpoint/scripts/powerpoint.sh"
   stage_doc_source="$(_stage_doc_path)"
-  generated_ppt="$REPO_ROOT/$(_project_powerpoint_source_relpath)"
-  wiki_ppt="$REPO_ROOT/$(_project_wiki_powerpoint_relpath)"
+  generated_ppt="$REPO_ROOT/$(_stage_powerpoint_source_relpath "$STAGE")"
+  wiki_ppt="$REPO_ROOT/$(_stage_wiki_powerpoint_relpath "$STAGE")"
 
   echo "[stages-action] INFO: running post-stage /powerpoint for project"
   PROMPT_INTERNAL_CALL=1 bash "$prompt_invoke_script" --prompt-name powerpoint --summary "/powerpoint (post-/project)" -- \
-    env SOURCE="$stage_doc_source" LAYER=digital-generic-team bash "$powerpoint_script"
+    env SOURCE="$stage_doc_source" LAYER="$(_active_layer_id)" bash "$powerpoint_script"
 
   if [[ ! -f "$generated_ppt" ]]; then
     echo "[stages-action] ERROR: generated project PowerPoint missing at ${generated_ppt#"$REPO_ROOT"/}"

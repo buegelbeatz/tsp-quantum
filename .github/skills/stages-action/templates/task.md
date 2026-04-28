@@ -19,6 +19,10 @@ layer: digital-generic-team
 
 {{description}}
 
+## Acceptance Criteria
+
+{{acceptance_criteria}}
+
 ## Implementation Hints
 
 {{hints}}

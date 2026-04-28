@@ -28,6 +28,12 @@ This skill provides deterministic delivery lifecycle wrappers for role-specific 
 - Container-oriented tickets may invoke `container-publish` to add or update governed GHCR publication in the target repository.
 - Documentation for published images should be synchronized as a GHCR docs artifact, not kept only in source control.
 
+## Instruction-First Delivery Contract
+
+- Delivery wording and execution expectations must be sourced from instructions and templates, not ad-hoc inline script text.
+- Task-specific instruction references from planning artifacts are mandatory inputs for delivery execution.
+- If delivery or review prompts require role-specific question wording, consume template-backed language from `artifacts`.
+
 ## Delivery Evidence Tracking
 
 The postfix workflow now includes automated delivery evidence generation to support stakeholder visibility and artifact recovery:

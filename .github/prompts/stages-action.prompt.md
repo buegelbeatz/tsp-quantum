@@ -12,6 +12,16 @@ make stages-action STAGE=<stage>
 ## Parameters
 
 - `stage` — required. Stage command name (`exploration` or `project`). Determines which stage instructions apply.
+- `TARGET_REPO_ROOT` / `DIGITAL_TARGET_REPO_ROOT` — optional absolute path to the intended target repository. Defaults to current working directory.
+- `TARGET_REPO_SLUG` / `DIGITAL_TARGET_REPO_SLUG` — optional GitHub slug override (`owner/repo`) for remote/API operations.
+
+Example:
+
+```bash
+TARGET_REPO_ROOT=/Users/becchri1/Documents/tsp-quantum \
+TARGET_REPO_SLUG=becchri1/tsp-quantum \
+make stages-action STAGE=project
+```
 
 ## Runtime contract
 

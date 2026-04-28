@@ -197,7 +197,7 @@ def _fit_body_lines(lines: list[str], max_lines: int = 10, max_chars: int = 98) 
     if len(fitted) <= max_lines:
         return fitted
     clipped = fitted[: max_lines - 1]
-    clipped.append("... see source document for remaining details")
+    clipped.append("Additional details are documented in the source artifact")
     return clipped
 
 
@@ -394,8 +394,21 @@ def _duplicate_slide(prs: Any, source_index: int) -> int:
 
 def _discover_visual_assets(repo_root: Path, source: Path) -> list[Path]:
     """Discover a small set of visual assets to enrich stakeholder slides."""
+    def _stage_from_markdown(path: Path) -> str:
+        if not path.exists() or path.suffix.lower() != ".md":
+            return "project"
+        text = path.read_text(encoding="utf-8", errors="replace")
+        match = re.search(r'^stage:\s*"?([a-z\-]+)"?\s*$', text, flags=re.MULTILINE)
+        if match:
+            return match.group(1).strip().lower()
+        return "project"
+
+    stage_name = _stage_from_markdown(source)
     roots = [
         source.parent / "assets",
+        repo_root / ".digital-artifacts" / "40-stage" / "assets",
+        repo_root / ".digital-artifacts" / "50-planning" / stage_name / "assets",
+        repo_root / "docs" / "wiki" / "assets" / "visualizations",
         repo_root / "docs" / "images" / "mermaid",
         repo_root / "docs" / "wiki" / "assets",
     ]
@@ -406,6 +419,11 @@ def _discover_visual_assets(repo_root: Path, source: Path) -> list[Path]:
             continue
         for path in sorted(root.rglob("*")):
             if path.is_file() and path.suffix.lower() in allowed:
+                lowered = path.as_posix().lower()
+                if "docs/ux/scribbles" in lowered and "tsp" not in lowered and stage_name not in lowered:
+                    continue
+                if "digital-generic-team" in path.name.lower() and stage_name not in lowered:
+                    continue
                 candidates.append(path)
                 if len(candidates) >= 8:
                     return candidates

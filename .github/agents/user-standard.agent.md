@@ -132,6 +132,15 @@ The `user-review-` prefix is mandatory to distinguish user-standard outputs from
 
 - `.github/instructions/shared/handoff.instructions.md`
 
+## Skill and Instruction Source Contract
+
+- Review wording must come from skill templates, not ad-hoc inline script text.
+- Keep user interview phrasing aligned with:
+  - `.github/skills/user-review/templates/interview-questionnaire.md`
+- Keep cross-agent review wording alignment with:
+  - `.github/skills/artifacts/templates/digital-artifacts/30-specification/REVIEW_QUESTION_BANK.yaml`
+- If script wording conflicts with template wording, templates are the source of truth.
+
 ## Base Pattern
 
 - generic-review

@@ -138,6 +138,36 @@ def _apply_language_gate(meta, extracted_content: str, *, bundle_metadata_cls):
     )
 
 
+def _format_text_bundle_content(meta, original_content: str) -> str:
+    """Preserve source extract and ingest hints while keeping English content primary."""
+    canonical_content = meta.txt_translation.strip()
+    source_content = original_content.strip()
+    if not canonical_content:
+        return original_content
+    if canonical_content == source_content:
+        return canonical_content
+
+    hint_lines: list[str] = []
+    if getattr(meta, "txt_inferred_type", ""):
+        hint_lines.append(f"- inferred_type: {meta.txt_inferred_type}")
+    for hint in getattr(meta, "txt_research_hints", []) or []:
+        hint_lines.append(f"- research_hint: {hint}")
+    if getattr(meta, "review_note", ""):
+        hint_lines.append(f"- review_note: {meta.review_note}")
+    hints_block = "\n".join(hint_lines) if hint_lines else "- none"
+
+    return (
+        "### Canonical English Content\n\n"
+        f"{canonical_content}\n\n"
+        "### Source-Preserved Extract\n\n"
+        "```markdown\n"
+        f"{source_content}\n"
+        "```\n\n"
+        "### Ingest Hints\n\n"
+        f"{hints_block}"
+    )
+
+
 def _allocate_extract_move(
     input_file,
     data_root: Path,
@@ -257,11 +287,13 @@ def ingest_file(
         input_file,
         bundle_metadata_cls=deps.bundle_metadata_cls,
     )
+    canonical_content = extracted_content
     if meta.txt_translation:
-        extracted_content = meta.txt_translation
+        canonical_content = meta.txt_translation
+        extracted_content = _format_text_bundle_content(meta, extracted_content)
     meta = _apply_language_gate(
         meta,
-        extracted_content,
+        canonical_content,
         bundle_metadata_cls=deps.bundle_metadata_cls,
     )
     _write_bundle_outputs(

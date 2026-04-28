@@ -602,9 +602,21 @@ def _evaluate_task_quality_gate(task_text: str, role: str) -> list[str]:
     """Return missing quality-gate requirements for a task artifact."""
     missing: list[str] = []
     lowered = task_text.lower()
+    if "…" in task_text or "..." in task_text:
+        missing.append("placeholder:truncated-ellipsis")
     for token in ("todo", "replace this", "address: extraction", "criterion 1"):
         if token in lowered:
             missing.append(f"placeholder:{token}")
+
+    if _contains_notebook_scope(task_text) and _contains_quantum_scope(task_text):
+        for marker in (
+            "Skill and instruction requirements:",
+            "Notebook execution contract:",
+            "Quantum analysis contract:",
+            "Reusable business logic must remain in src/ modules",
+        ):
+            if marker not in task_text:
+                missing.append(f"missing:{marker}")
 
     for marker in _role_requirement_markers(role):
         if marker not in task_text:
@@ -721,15 +733,63 @@ def _dedupe_text(values: list[str]) -> list[str]:
     return result
 
 
-def _compact_issue_line(text: str, max_chars: int = 240) -> str:
-    """Normalize one issue line and keep it concise for planning artifacts."""
+def _compact_issue_line(text: str, max_chars: int = 1200) -> str:
+    """Normalize one issue line while preserving full planning semantics."""
     normalized = " ".join(text.strip().split())
     if not normalized:
         return ""
     if len(normalized) <= max_chars:
         return normalized
-    trimmed = normalized[: max_chars - 3].rstrip(" .,:;-")
-    return f"{trimmed}..."
+    return normalized[:max_chars].rstrip(" .,:;-")
+
+
+def _contains_notebook_scope(*texts: str) -> bool:
+    """Return True when scope indicates Jupyter/notebook work."""
+    corpus = " ".join(texts).lower()
+    return any(token in corpus for token in ("notebook", "jupyter", ".ipynb", "ipynb"))
+
+
+def _contains_quantum_scope(*texts: str) -> bool:
+    """Return True when scope indicates quantum implementation work."""
+    corpus = " ".join(texts).lower()
+    return any(
+        token in corpus
+        for token in ("quantum", "qiskit", "qaoa", "dqi", "hypergraph", "qubit")
+    )
+
+
+def _skill_instruction_requirements(
+    title: str,
+    problem: str,
+    scope: str,
+    acceptance: list[str],
+) -> list[str]:
+    """Return mandatory skill/instruction requirements for specialized scopes."""
+    has_notebook = _contains_notebook_scope(title, problem, scope, *acceptance)
+    has_quantum = _contains_quantum_scope(title, problem, scope, *acceptance)
+    if not (has_notebook or has_quantum):
+        return []
+
+    lines = ["Skill and instruction requirements:"]
+    if has_notebook:
+        lines.extend(
+            [
+                "- Notebook execution contract:",
+                "  - Notebook cells must orchestrate experiments, explain methodology, and render decision-ready visuals.",
+                "  - Reusable business logic must remain in src/ modules and be imported by notebook cells.",
+                "  - Reported tables and charts must be reproducible from code cells in one deterministic run.",
+            ]
+        )
+    if has_quantum:
+        lines.extend(
+            [
+                "- Quantum analysis contract:",
+                "  - Define a classical baseline metric (for example tour length, runtime, approximation quality).",
+                "  - Compare at least one quantum-oriented approach against one classical heuristic using the same dataset.",
+                "  - Document algorithm assumptions, hardware/simulator limits, and interpretation caveats in plain language.",
+            ]
+        )
+    return lines
 
 
 def _canonical_issue_text(text: str) -> str:
@@ -1056,12 +1116,18 @@ def _normalize_hints(raw_hints: list[str], _spec_path: Path) -> list[str]:
 
 def _task_execution_steps(scope_line: str, _acceptance: list[str]) -> list[str]:
     """Build deterministic and actionable execution steps for task artifacts."""
-    return [
-        f"Implement the approved scope boundary: {scope_line}",
-        "Deliver the primary outcome aligned with the acceptance criteria and role contract.",
-        "Document and preserve scope boundaries with explicit in/out decisions.",
-        "Verify review-readiness with test and quality evidence before handoff.",
-    ]
+    steps = [f"Implement the approved scope boundary: {scope_line}"]
+    for criterion in _acceptance[:5]:
+        criterion_line = _compact_issue_line(criterion)
+        if criterion_line:
+            steps.append(f"Satisfy acceptance criterion: {criterion_line}")
+    steps.extend(
+        [
+            "Document and preserve scope boundaries with explicit in/out decisions.",
+            "Verify review-readiness with test and quality evidence before handoff.",
+        ]
+    )
+    return steps
 
 
 def _is_meta_planning_scope(title: str, problem: str, scope: str) -> bool:
@@ -1353,6 +1419,7 @@ def _build_core_planning_artifacts(
     standards_block = ["Normative references:"] + [
         f"- {line}" for line in _standard_reference_lines(task_agent_role)
     ]
+    skill_block = _skill_instruction_requirements(title, problem, scope, acceptance)
 
     execution_steps = (
         [
@@ -1364,10 +1431,26 @@ def _build_core_planning_artifacts(
         if ux_scope
         else _task_execution_steps(planning_focus_line, acceptance)
     )
-    delivery_objective_line = acceptance[0] if acceptance else "Implementation outcome is testable and review-ready."
-    execution_context_line = _compact_issue_line(scope or problem or title)
-    if _is_near_duplicate_text(execution_context_line, delivery_objective_line):
-        execution_context_line = _compact_issue_line(title)
+    delivery_objective_lines = [
+        f"- {_compact_issue_line(item)}"
+        for item in acceptance[:6]
+        if _compact_issue_line(item)
+    ]
+    if not delivery_objective_lines:
+        delivery_objective_lines = ["- Implementation outcome is testable and review-ready."]
+
+    execution_context_candidates = _dedupe_text(
+        [
+            _compact_issue_line(scope),
+            _compact_issue_line(problem),
+            _compact_issue_line(title),
+        ]
+    )
+    execution_context_lines = [
+        f"- {line}" for line in execution_context_candidates[:3] if line
+    ]
+    if not execution_context_lines:
+        execution_context_lines = [f"- {_compact_issue_line(title) or title}"]
     verification_plan = [
         "- [ ] Add/adjust automated tests that prove the implemented scope.",
         "- [ ] Run `make test` and `make quality` before PR handoff.",
@@ -1394,12 +1477,13 @@ def _build_core_planning_artifacts(
                     *requirements_block,
                     "",
                     *standards_block,
+                    *( ["", *skill_block] if skill_block else [] ),
                     "",
                     "Delivery objective:",
-                    f"- {delivery_objective_line}",
+                    *delivery_objective_lines,
                     "",
                     "Execution context:",
-                    f"- {execution_context_line}",
+                    *execution_context_lines,
                     "",
                     "Execution plan:",
                     *[
@@ -1415,6 +1499,12 @@ def _build_core_planning_artifacts(
                 ]
             ),
             "hints": "\n".join(f"- {item}" for item in hints),
+            "acceptance_criteria": "\n".join(
+                f"- [ ] {_compact_issue_line(item)}"
+                for item in acceptance[:8]
+                if _compact_issue_line(item)
+            )
+            or "- [ ] Acceptance criteria are specified and testable.",
             "milestone_id": milestone_id,
             "sprint_hint": sprint_hint,
             "parent_epic": epic_id,

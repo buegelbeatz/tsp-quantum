@@ -14,6 +14,11 @@ This skill orchestrates role-specific implementation flows using the generic del
 2. Execute role implementation work in repository scope.
 3. Run generic-deliver postfix to finalize delivery and produce handoff metadata.
 
+## Compliance Scope
+
+- Implementation must honor instruction references embedded in planning artifacts.
+- Delivery wording governance is centralized in `generic-deliver` to avoid duplicate policy text across role wrappers.
+
 ## Script
 
 - `scripts/fullstack-delivery.sh`

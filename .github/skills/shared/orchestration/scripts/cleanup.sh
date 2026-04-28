@@ -86,8 +86,42 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+TARGET_REPO_ROOT_EFFECTIVE="${TARGET_REPO_ROOT:-${DIGITAL_TARGET_REPO_ROOT:-}}"
+if [[ -n "$TARGET_REPO_ROOT_EFFECTIVE" ]]; then
+  TARGET_REPO_ROOT_EFFECTIVE="$(cd "$TARGET_REPO_ROOT_EFFECTIVE" && pwd)"
+  if [[ "${CLEANUP_DELEGATED:-0}" != "1" && "$TARGET_REPO_ROOT_EFFECTIVE" != "$REPO_ROOT" ]]; then
+    target_cleanup_script="$TARGET_REPO_ROOT_EFFECTIVE/.github/skills/shared/orchestration/scripts/cleanup.sh"
+    [[ -f "$target_cleanup_script" ]] || die "Target cleanup script missing: $target_cleanup_script"
+    log_info "Delegating cleanup execution to target repository: $TARGET_REPO_ROOT_EFFECTIVE"
+    exec env \
+      CLEANUP_DELEGATED=1 \
+      TARGET_REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE" \
+      DIGITAL_TARGET_REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE" \
+      TARGET_REPO_SLUG="${TARGET_REPO_SLUG:-${DIGITAL_TARGET_REPO_SLUG:-}}" \
+      DIGITAL_TARGET_REPO_SLUG="${DIGITAL_TARGET_REPO_SLUG:-${TARGET_REPO_SLUG:-}}" \
+      bash "$target_cleanup_script" \
+        --repo-root "$TARGET_REPO_ROOT_EFFECTIVE" \
+        --dry-run "$DRY_RUN" \
+        --confirm "$CONFIRM" \
+        --github "$RUN_GITHUB" \
+        --remote "$RUN_REMOTE" \
+        --board "$TARGET_BOARD"
+  fi
+  REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE"
+fi
+
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 [[ -d "$REPO_ROOT/.git" ]] || die "Not a git repository: $REPO_ROOT"
+COMMON_LIB="$REPO_ROOT/.github/skills/shared/shell/scripts/lib/common.sh"
+GITHUB_LIB="$REPO_ROOT/.github/skills/shared/shell/scripts/lib/github.sh"
+BOARD_CONFIG="$REPO_ROOT/.github/skills/board/scripts/board_config.py"
+RUN_TOOL_SH="$REPO_ROOT/.github/skills/shared/shell/scripts/run-tool.sh"
+[[ -f "$COMMON_LIB" ]] || die "Missing common library: $COMMON_LIB"
+[[ -f "$GITHUB_LIB" ]] || die "Missing GitHub library: $GITHUB_LIB"
+# shellcheck source=/dev/null
+source "$COMMON_LIB"
+# shellcheck source=/dev/null
+source "$GITHUB_LIB"
 [[ -f "$BOARD_CONFIG" ]] || die "Missing board config helper: $BOARD_CONFIG"
 
 # Mandatory contract for /cleanup: GitHub + remote board refs are always required.
@@ -369,7 +403,10 @@ cleanup_github() {
   fi
 
   local repo_slug
-  repo_slug="$(github_repo_slug_from_git 2>/dev/null || true)"
+  repo_slug="${TARGET_REPO_SLUG:-${DIGITAL_TARGET_REPO_SLUG:-}}"
+  if [[ -z "$repo_slug" ]]; then
+    repo_slug="$(github_default_repo_slug 2>/dev/null || true)"
+  fi
   if [[ -z "$repo_slug" ]]; then
     die "Unable to resolve GitHub repo slug from origin remote; cannot complete mandatory GitHub cleanup"
   fi

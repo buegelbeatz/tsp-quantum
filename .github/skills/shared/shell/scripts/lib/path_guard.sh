@@ -14,7 +14,18 @@ _path_guard_repo_root() {
 
 _path_guard_realpath() {
   local target="$1"
-  bash "$(dirname "${BASH_SOURCE[0]}")/../run-tool.sh" python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target"
+  local tool_runner
+  tool_runner="$(dirname "${BASH_SOURCE[0]}")/../run-tool.sh"
+  if [[ -f "$tool_runner" ]]; then
+    bash "$tool_runner" python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target"
+  elif command -v realpath >/dev/null 2>&1; then
+    realpath "$target"
+  elif command -v perl >/dev/null 2>&1; then
+    perl -MCwd=realpath -e 'my $p = realpath(shift); die "realpath failed\n" unless defined $p; print $p' "$target"
+  else
+    echo "[path-guard] ERROR: cannot normalize path; missing run-tool.sh and realpath/perl fallback" >&2
+    return 1
+  fi
 }
 
 assert_path_within_repo() {

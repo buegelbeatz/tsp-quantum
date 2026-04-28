@@ -20,7 +20,7 @@ DEFAULT_TEMPLATE = """# Data Bundle {{ITEM_CODE}}
 - extraction_engine: {{EXTRACTION_ENGINE}}
 - extraction_status: {{EXTRACTION_STATUS}}
 
-## Content
+## Bundle Content
 
 {{CONTENT_BODY}}
 """

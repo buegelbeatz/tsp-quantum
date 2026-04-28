@@ -85,7 +85,7 @@ def test_move_source_to_done_strips_stacked_bundle_prefixes(tmp_path: Path) -> N
 
 
 def test_ingest_flow_normalizes_markdown_content_to_english(tmp_path: Path) -> None:
-    """Markdown source content should be replaced by translated English bundle text."""
+    """Markdown bundles should keep canonical English content and preserve source context."""
     input_file = SimpleNamespace(
         path=tmp_path / "00-input" / "documents" / "source.md",
         classification="document",
@@ -170,7 +170,14 @@ def test_ingest_flow_normalizes_markdown_content_to_english(tmp_path: Path) -> N
     )
 
     assert result.item_code == "00000"
-    assert captured["content"] == "# Problem\n\nEnglish content"
+    content = captured["content"]
+    assert "### Canonical English Content" in content
+    assert "# Problem\n\nEnglish content" in content
+    assert "### Source-Preserved Extract" in content
+    assert "Deutscher Inhalt" in content
+    assert "### Ingest Hints" in content
+    assert "research_hint: hint-a" in content
+    assert "review_note: Needs scoping." in content
     meta = captured["meta"]
     assert meta.txt_translation == "# Problem\n\nEnglish content"  # type: ignore[attr-defined]
     assert meta.txt_inferred_type == "project"  # type: ignore[attr-defined]
@@ -379,6 +386,29 @@ def test_ingest_flow_adds_bug_context_review_note(tmp_path: Path) -> None:
     meta = captured["meta"]
     assert "Needs reproduction." in meta.review_note  # type: ignore[attr-defined]
     assert "screenshot.png" in meta.review_note  # type: ignore[attr-defined]
+
+
+def test_format_text_bundle_content_avoids_duplicate_source_block() -> None:
+    """No source appendix is needed when translation matches the extracted content."""
+    meta = _FlowMeta(
+        item_code="00001",
+        date_key="2026-04-09",
+        source_file="done.md",
+        source_input_file="input.md",
+        source_fingerprint_sha256="sha256",
+        classification="document",
+        file_format="md",
+        processed_at="2026-04-09T00:00:00Z",
+        txt_translation="# Problem\n\nEnglish content",
+    )
+
+    format_bundle_content = getattr(i2d_ingest_flow, "_format_text_bundle_content")
+    content = format_bundle_content(
+        meta,
+        "# Problem\n\nEnglish content",
+    )
+
+    assert content == "# Problem\n\nEnglish content"
 
 
 def test_ingest_file_delegates_to_flow_helper(tmp_path: Path) -> None:

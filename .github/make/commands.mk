@@ -58,9 +58,13 @@ runtime-gc: ## Clean eligible .digital-runtime artifacts (MODE=dry-run|apply, de
 	@bash $(_RUNTIME_GC_SCRIPT) --repo-root "$$(pwd)" --mode "$${MODE:-dry-run}"
 
 cleanup: preflight ## Cleanup local board/sprint/wiki artifacts and mandatory GitHub resources
-	@bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name cleanup --summary "/cleanup" -- \
+	@target_repo_root="$${TARGET_REPO_ROOT:-$${DIGITAL_TARGET_REPO_ROOT:-$$(pwd)}}"; \
+	 target_repo_slug="$${TARGET_REPO_SLUG:-$${DIGITAL_TARGET_REPO_SLUG:-}}"; \
+	 TARGET_REPO_ROOT="$$target_repo_root" DIGITAL_TARGET_REPO_ROOT="$$target_repo_root" \
+	 TARGET_REPO_SLUG="$$target_repo_slug" DIGITAL_TARGET_REPO_SLUG="$$target_repo_slug" \
+	 bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name cleanup --summary "/cleanup" -- \
 	  bash $(_CLEANUP_SCRIPT) \
-	    --repo-root "$$(pwd)" \
+	    --repo-root "$$target_repo_root" \
 	    --dry-run "$${DRY_RUN:-0}" \
 	    --confirm "$${CONFIRM:-1}" \
 	    --github "1" \
@@ -176,15 +180,27 @@ stages:
 
 stages-action: preflight
 	@[[ -n "$(STAGE)" ]] || (echo "STAGE is required, e.g. make stages-action STAGE=project" >&2; exit 2)
-	@bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name stages-action --summary "/stages-action stage=$(STAGE)" -- \
+	@target_repo_root="$${TARGET_REPO_ROOT:-$${DIGITAL_TARGET_REPO_ROOT:-$$(pwd)}}"; \
+	 target_repo_slug="$${TARGET_REPO_SLUG:-$${DIGITAL_TARGET_REPO_SLUG:-}}"; \
+	 TARGET_REPO_ROOT="$$target_repo_root" DIGITAL_TARGET_REPO_ROOT="$$target_repo_root" \
+	 TARGET_REPO_SLUG="$$target_repo_slug" DIGITAL_TARGET_REPO_SLUG="$$target_repo_slug" \
+	 bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name stages-action --summary "/stages-action stage=$(STAGE)" -- \
 	  bash $(_STAGES_ACTION_SCRIPT) "$(STAGE)"
 
 exploration: preflight ## Run exploration stage workflow with full prompt-audit tracing
-	@bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name exploration --summary "/exploration" -- \
+	@target_repo_root="$${TARGET_REPO_ROOT:-$${DIGITAL_TARGET_REPO_ROOT:-$$(pwd)}}"; \
+	 target_repo_slug="$${TARGET_REPO_SLUG:-$${DIGITAL_TARGET_REPO_SLUG:-}}"; \
+	 TARGET_REPO_ROOT="$$target_repo_root" DIGITAL_TARGET_REPO_ROOT="$$target_repo_root" \
+	 TARGET_REPO_SLUG="$$target_repo_slug" DIGITAL_TARGET_REPO_SLUG="$$target_repo_slug" \
+	 bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name exploration --summary "/exploration" -- \
 	  bash $(_STAGES_ACTION_SCRIPT) exploration
 
 project: preflight ## Run /project as thin frontdoor; stage orchestration lives in stages-action skill runtime
-	@bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name project --summary "/project" -- \
+	@target_repo_root="$${TARGET_REPO_ROOT:-$${DIGITAL_TARGET_REPO_ROOT:-$$(pwd)}}"; \
+	 target_repo_slug="$${TARGET_REPO_SLUG:-$${DIGITAL_TARGET_REPO_SLUG:-}}"; \
+	 TARGET_REPO_ROOT="$$target_repo_root" DIGITAL_TARGET_REPO_ROOT="$$target_repo_root" \
+	 TARGET_REPO_SLUG="$$target_repo_slug" DIGITAL_TARGET_REPO_SLUG="$$target_repo_slug" \
+	 bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name project --summary "/project" -- \
 	  bash $(_STAGES_ACTION_SCRIPT) project
 
 check-delivery-work: preflight ## Scan runtime handoffs for pending delivery work (default STAGE=project)

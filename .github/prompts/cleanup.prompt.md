@@ -16,6 +16,16 @@ make cleanup
 - `GITHUB_CLEANUP` — MUST be `1` (`/cleanup` requires GitHub-side cleanup).
 - `REMOTE` — MUST be `1` (`/cleanup` requires remote ref cleanup).
 - `BOARD` — optional board filter for board-scoped cleanup.
+- `TARGET_REPO_ROOT` / `DIGITAL_TARGET_REPO_ROOT` — optional absolute path to the intended target repository. Defaults to current working directory.
+- `TARGET_REPO_SLUG` / `DIGITAL_TARGET_REPO_SLUG` — optional GitHub slug override (`owner/repo`) for cleanup API calls when remote detection is ambiguous.
+
+Example (cleanup app repo from framework repo context):
+
+```bash
+TARGET_REPO_ROOT=/Users/becchri1/Documents/tsp-quantum \
+TARGET_REPO_SLUG=becchri1/tsp-quantum \
+make cleanup
+```
 
 ## Runtime contract
 

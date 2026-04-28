@@ -22,6 +22,7 @@ artifact content.
 - Preserve `00-input` subfolder classification (`features`, `bugs`, `documents`) in downstream data metadata.
 - Standardize `10-data` bundle numbering with five-digit zero-padded identifiers.
 - Provide template-first artifact creation so generated outputs stay consistent.
+- Store expert review question/gap/finding language in templates (not inline script constants).
 - Route unhandled file formats to the richer extraction pipeline used by `agile-coach-intake-normalizer`.
 - Govern canonical prompt entrypoints owned by `agile-coach`:
   - `/artifacts-testdata-2-input`
@@ -132,6 +133,13 @@ The Python utility provides operational subcommands for:
   - producer code (`artifacts_flow_planning.py`),
   - consumer expectations (if any),
   - skill/process documentation.
+
+### Expert Review Language Contract
+
+- Source of truth for role-specific review wording:
+  - `templates/digital-artifacts/30-specification/REVIEW_QUESTION_BANK.yaml`
+- Scripts in `artifacts_flow_data_to_spec.py` must consume this template data.
+- Hardcoded question banks in Python are allowed only as runtime fallback when template loading fails.
 
 ## Dependencies
 

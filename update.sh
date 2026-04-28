@@ -29,6 +29,22 @@ if [[ -f "$PATH_GUARD_LIB" ]]; then
     source "$PATH_GUARD_LIB"
 fi
 
+# During update phase 1, .github content can be temporarily pruned and recreated.
+# If path_guard was sourced from an older layer snapshot, run-tool.sh may disappear
+# momentarily and break path normalization. Force a resilient fallback here.
+if declare -f _path_guard_realpath >/dev/null 2>&1; then
+    _path_guard_realpath() {
+        local target="$1"
+        local tool_runner
+        tool_runner="$GITHUB_DIR/skills/shared/shell/scripts/run-tool.sh"
+        if [[ -f "$tool_runner" ]]; then
+            bash "$tool_runner" python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target"
+        else
+            python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target"
+        fi
+    }
+fi
+
 # Fallback for bootstrap phase: before .github is materialized in a target repo,
 # path_guard.sh is unavailable and safe_mkdir_p would be undefined.
 if ! declare -f safe_mkdir_p >/dev/null 2>&1; then

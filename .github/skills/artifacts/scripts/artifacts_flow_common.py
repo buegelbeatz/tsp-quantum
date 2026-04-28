@@ -91,8 +91,13 @@ def iter_data_bundles(data_root: Path) -> Iterable[BundleRef]:
 
 def ensure_text(path: Path, content: str) -> None:
     """Write UTF-8 content after ensuring directory exists."""
+    normalized = content
+    if "/.digital-artifacts/" in path.as_posix() and path.suffix.lower() == ".md":
+        normalized = normalized.replace("…", " ")
+        normalized = normalized.replace("...", " ")
+        normalized = "\n".join(line.rstrip() for line in normalized.splitlines()) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    path.write_text(normalized, encoding="utf-8")
 
 
 def stage_readiness(spec_text: str) -> tuple[bool, list[str]]:

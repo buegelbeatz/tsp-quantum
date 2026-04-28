@@ -1,0 +1,84 @@
+---
+layer: digital-generic-team
+schema: review_question_bank_v1
+version: 1
+roles:
+  ux-designer:
+    relevant_questions:
+      - "Which primary persona and end-to-end flow should UX optimize first?{evidence_suffix}"
+      - "Which accessibility acceptance criterion must be proven before planning handoff?"
+    relevant_missing_information:
+      - "Primary user segment, journey step, or interaction pain is underspecified.{evidence_hint}"
+      - "Accessibility and feedback-loop expectations are not yet crisp enough for implementation tasks."
+    finding_template: "{role} anchored its assessment on: {evidence}"
+    low_score_question: "Which missing detail would lift the {role} assessment from proceed-with-conditions to proceed?"
+    not_relevant_questions:
+      - "Which explicit requirement should bring {role} into scope for this stage?{evidence_suffix}"
+      - "Which missing artifact or stakeholder signal would justify keeping {role} in the review set?"
+    not_relevant_missing_information:
+      - "No explicit {role} trigger was strong enough in the normalized source bundle.{evidence_hint}"
+      - "Cross-role dependency evidence is missing for this expert domain."
+
+  security-expert:
+    relevant_questions:
+      - "Which threat scenario, trust boundary, or sensitive asset is most exposed here?{evidence_suffix}"
+      - "Which mandatory control must exist before delivery can start?"
+    relevant_missing_information:
+      - "Threat actor, sensitive asset, or trust boundary is not explicitly documented.{evidence_hint}"
+      - "Required preventative and detective controls are still implicit."
+    finding_template: "{role} anchored its assessment on: {evidence}"
+    low_score_question: "Which missing detail would lift the {role} assessment from proceed-with-conditions to proceed?"
+    not_relevant_questions:
+      - "Which explicit requirement should bring {role} into scope for this stage?{evidence_suffix}"
+      - "Which missing artifact or stakeholder signal would justify keeping {role} in the review set?"
+    not_relevant_missing_information:
+      - "No explicit {role} trigger was strong enough in the normalized source bundle.{evidence_hint}"
+      - "Cross-role dependency evidence is missing for this expert domain."
+
+  quality-expert:
+    relevant_questions:
+      - "Which executable test or measurement will prove the requirement is done?{evidence_suffix}"
+      - "Which quality gate is currently weakest: correctness, coverage, or reproducibility?"
+    relevant_missing_information:
+      - "Verification evidence and pass/fail thresholds are still too implicit.{evidence_hint}"
+      - "The path from acceptance criteria to executable tests is not fully mapped."
+    finding_template: "{role} anchored its assessment on: {evidence}"
+    low_score_question: "Which missing detail would lift the {role} assessment from proceed-with-conditions to proceed?"
+    not_relevant_questions:
+      - "Which explicit requirement should bring {role} into scope for this stage?{evidence_suffix}"
+      - "Which missing artifact or stakeholder signal would justify keeping {role} in the review set?"
+    not_relevant_missing_information:
+      - "No explicit {role} trigger was strong enough in the normalized source bundle.{evidence_hint}"
+      - "Cross-role dependency evidence is missing for this expert domain."
+
+  platform-architect:
+    relevant_questions:
+      - "Which service boundary or integration contract owns this capability?{evidence_suffix}"
+      - "Which dependency must be fixed first so stories can be split cleanly?"
+    relevant_missing_information:
+      - "System boundaries and integration ownership need sharper decomposition.{evidence_hint}"
+      - "Operational dependencies are not yet translated into delivery-safe sequencing."
+    finding_template: "{role} anchored its assessment on: {evidence}"
+    low_score_question: "Which missing detail would lift the {role} assessment from proceed-with-conditions to proceed?"
+    not_relevant_questions:
+      - "Which explicit requirement should bring {role} into scope for this stage?{evidence_suffix}"
+      - "Which missing artifact or stakeholder signal would justify keeping {role} in the review set?"
+    not_relevant_missing_information:
+      - "No explicit {role} trigger was strong enough in the normalized source bundle.{evidence_hint}"
+      - "Cross-role dependency evidence is missing for this expert domain."
+
+  quantum-expert:
+    relevant_questions:
+      - "Which classical baseline and comparison metric justify quantum exploration?{evidence_suffix}"
+      - "Which problem slice is genuinely quantum-relevant versus classical optimization?"
+    relevant_missing_information:
+      - "Quantum applicability lacks a fully explicit baseline and evaluation envelope.{evidence_hint}"
+      - "The handoff between classical and quantum-inspired methods is not yet bounded tightly enough."
+    finding_template: "{role} anchored its assessment on: {evidence}"
+    low_score_question: "Which missing detail would lift the {role} assessment from proceed-with-conditions to proceed?"
+    not_relevant_questions:
+      - "Which explicit requirement should bring {role} into scope for this stage?{evidence_suffix}"
+      - "Which missing artifact or stakeholder signal would justify keeping {role} in the review set?"
+    not_relevant_missing_information:
+      - "No explicit {role} trigger was strong enough in the normalized source bundle.{evidence_hint}"
+      - "Cross-role dependency evidence is missing for this expert domain."

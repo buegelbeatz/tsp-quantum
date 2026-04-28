@@ -451,7 +451,7 @@ def test_data_to_specification_surfaces_expert_questions_and_gap_analysis(
     )
     review_text = review_path.read_text(encoding="utf-8")
     assert "## Open Questions" in review_text
-    assert "Which explicit requirement should be owned by" in review_text
+    assert "Which missing artifact or stakeholder signal would justify keeping quality-expert in the review set?" in review_text
     assert "## Gap Analysis" in review_text
 
 
@@ -1719,6 +1719,63 @@ def test_build_core_planning_artifacts_routes_help_command_scope_to_fullstack() 
     assert "Implement approved scope" in task_text
 
 
+def test_task_execution_steps_include_acceptance_criteria_lines() -> None:
+    """Execution steps must map acceptance criteria explicitly instead of generic placeholders."""
+    build_steps = getattr(artifacts_flow_planning, "_task_execution_steps")
+
+    steps = build_steps(
+        "Implement city dataset and route evaluation",
+        [
+            "Notebook comparison table shows all algorithms.",
+            "Each algorithm reports runtime and route cost.",
+        ],
+    )
+
+    assert any("Satisfy acceptance criterion:" in step for step in steps)
+    assert any("Notebook comparison table shows all algorithms." in step for step in steps)
+
+
+def test_build_core_planning_artifacts_adds_notebook_quantum_skill_requirements() -> None:
+    """Notebook + quantum scope must include explicit skill/instruction requirements."""
+    templates = {
+        "epic": "{{epic_id}} {{agent_role}}",
+        "story": "{{story_id}} {{agent_role}}",
+        "task": "{{task_id}}|{{title}}|{{agent_role}}\n{{description}}\n{{acceptance_criteria}}",
+    }
+    bundle = SimpleNamespace(item_code="THM-99")
+    build_core = getattr(artifacts_flow_planning, "_build_core_planning_artifacts")
+
+    rendered = build_core(
+        stage="project",
+        bundle=bundle,
+        spec_path=Path("/tmp/spec.md"),
+        templates=templates,
+        title="Quantum notebook delivery",
+        problem="Build a Jupyter notebook that compares classical and quantum TSP approaches.",
+        scope="Implement Qiskit-based notebook experiments and explain outputs for stakeholders.",
+        acceptance=["Notebook runs end-to-end with deterministic outputs."],
+        hints=["Keep core logic in src."],
+        milestone_id="MS-PROJECT-THM-99",
+        sprint_hint="next",
+    )
+
+    task_text = rendered["task"]
+    assert "Skill and instruction requirements:" in task_text
+    assert ".github/instructions/data-scientist/jupyter.instructions.md" in task_text
+    assert ".github/instructions/quantum-expert/jupyter-quantum.instructions.md" in task_text
+    assert ".github/instructions/quantum-expert/quantum-computing.instructions.md" in task_text
+
+
+def test_evaluate_task_quality_gate_flags_truncated_ellipsis() -> None:
+    """Truncated ellipsis markers must fail the planning quality gate."""
+    evaluate = getattr(artifacts_flow_planning, "_evaluate_task_quality_gate")
+    issues = evaluate(
+        "Requirement contract:\nFunctional requirements:\nSkill and instruction requirements:\n...",
+        "fullstack-engineer",
+    )
+    assert "placeholder:truncated-ellipsis" in issues
+
+
 def test_mark_handoff_done_with_evidence_updates_required_fields(tmp_path: Path) -> None:
     """Handoff completion helper should persist done status and required review evidence fields."""
     handoff = tmp_path / "task-thm-99-handoff.yaml"
@@ -2631,6 +2688,48 @@ def test_stage_document_content_builds_reader_friendly_summary_and_scope() -> No
     assert "## Scope Boundaries" in content
     assert "### In Scope" in content
     assert "### Out of Scope" in content
+
+
+def test_stage_document_content_surfaces_review_signals() -> None:
+    """Canonical stage docs should expose recommendation and gap signals from cumulated reviews."""
+    stage_document_content = getattr(artifacts_flow_stage, "_stage_document_content")
+
+    content = stage_document_content(
+        "project",
+        {
+            "stage_id": "05",
+            "description": "Enterprise Specification: Project Stage",
+            "purpose": "- Turn reviewed specifications into planning-ready project scope",
+            "requirements": "",
+            "readiness": "- PROJECT.md exists",
+        },
+        [
+            {
+                "bundle": SimpleNamespace(date_key="2026-04-16", item_code="00000"),
+                "spec_path": Path("spec.md"),
+                "spec_text": "# Spec\n\n## Synthesized Problem Statement\n- One coherent problem statement.\n",
+                "review_text": "\n".join(
+                    [
+                        "## Readiness Assessment",
+                        "- recommendation: proceed-with-conditions",
+                        "",
+                        "## Scenario Classification",
+                        "- scenario: startable",
+                        "- scenario_rationale: Review evidence is actionable but still conditional.",
+                        "",
+                        "## Gap Analysis",
+                        "- API ownership is not fully assigned.",
+                    ]
+                ),
+            }
+        ],
+        [],
+    )
+
+    assert "## Review Signals" in content
+    assert "recommendation=proceed-with-conditions" in content
+    assert "scenario=startable" in content
+    assert "first_gap=API ownership is not fully assigned." in content
 
 
 def test_planning_theme_focus_and_milestone_fields_are_deterministic() -> None:

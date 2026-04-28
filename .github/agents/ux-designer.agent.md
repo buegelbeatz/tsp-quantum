@@ -299,6 +299,15 @@ Before handing UX artifacts to PowerPoint generation, provide at minimum:
 - delivery-requirements-mapping
 - powerpoint
 
+## Skill and Instruction Source Contract
+
+- UX review and clarification wording must come from skill templates and instruction files, not ad-hoc inline text in execution scripts.
+- For stage/specification review phrasing, align with:
+	- `.github/skills/artifacts/templates/digital-artifacts/30-specification/REVIEW_QUESTION_BANK.yaml`
+- For user interview rounds, align questionnaire phrasing with:
+	- `.github/skills/user-review/templates/interview-questionnaire.md`
+- If script wording conflicts with these templates, templates are authoritative.
+
 ## Security Scope
 - Identify sensitive or personally identifiable data visible in user-facing flows.
 - Flag hardcoded values in UI copy that expose internals.
