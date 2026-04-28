@@ -221,6 +221,12 @@ def _active_stage() -> str:
     )
 
 
+def _enable_topic_handoffs() -> bool:
+    """Return True when optional topic-level expert handoffs are enabled."""
+    value = os.getenv("DIGITAL_ENABLE_TOPIC_HANDOFFS", "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 def _review_dir(spec_root: Path, bundle) -> Path:
     """Return canonical review directory for one bundle under 60-review."""
     artifacts_root = spec_root.parent
@@ -343,6 +349,7 @@ def _source_note_lines(source_text: str, limit: int = 10) -> list[str]:
         "source notes",
         "problem statement",
         "user profile & ux",
+        "enterprise project specification",
     }
 
     blocked_prefixes = (
@@ -473,6 +480,8 @@ def _source_note_lines(source_text: str, limit: int = 10) -> list[str]:
         if lowered.startswith(blocked_prefixes):
             continue
         if re.match(r"^\d+\.\s+", line):
+            continue
+        if line.startswith(("🧭", "📘", "📊", "⚙️")):
             continue
         if re.match(r"^[a-z0-9_\-]+:\s*", lowered):
             continue
@@ -1271,6 +1280,7 @@ def _expert_response_yaml(
     recommendation: str,
     review_path: Path,
     spec_path: Path,
+    source_markdown: str = "",
 ) -> str:
     confidence = _confidence_label(score)
     summary = (
@@ -1284,7 +1294,7 @@ def _expert_response_yaml(
         "Assessment is based on currently available source evidence.",
         "Cross-team dependencies may adjust final planning structure.",
     ]
-    questions = _agent_questions(from_role, score, "relevant", review_path.read_text(encoding="utf-8") if review_path.exists() else "")
+    questions = _agent_questions(from_role, score, "relevant", source_markdown)
 
     return "\n".join(
         [
@@ -1706,6 +1716,7 @@ def _process_review_block(
                 recommendation=recommendation,
                 review_path=agent_review_path,
                 spec_path=agent_spec_path,
+                source_markdown=combined_source,
             ),
         )
         ensure_text(
@@ -1737,7 +1748,7 @@ def _process_review_block(
             ),
         )
 
-        if agent == "quantum-expert":
+        if agent == "quantum-expert" and _enable_topic_handoffs():
             for topic in _quantum_algorithm_topics(combined_source):
                 topic_slug = re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
                 topic_request_id = f"{request_id}-{topic_slug}"
@@ -1776,6 +1787,7 @@ def _process_review_block(
                         recommendation=recommendation,
                         review_path=agent_review_path,
                         spec_path=agent_spec_path,
+                        source_markdown=topic_source,
                     ),
                 )
 

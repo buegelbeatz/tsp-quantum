@@ -42,9 +42,9 @@ fi
 generated_deck="$($PYTHON_BIN -c 'import json,sys; print(json.loads(sys.stdin.read())["output"])' <<< "$build_payload")"
 template_deck="$($PYTHON_BIN -c 'import json,sys; print(json.loads(sys.stdin.read())["template"])' <<< "$build_payload")"
 deck_slug="$(basename "$generated_deck" .pptx)"
+screenshot_dir="$REPO_ROOT/docs/powerpoints/.test/$deck_slug"
 
 if [[ "$REQUIRE_SCREENSHOTS" == "1" ]]; then
-  screenshot_dir="$REPO_ROOT/docs/powerpoints/.test/$deck_slug"
   "$PYTHON_BIN" "$SCRIPT_DIR/render_slide_screenshots.py" --input "$generated_deck" --output-dir "$screenshot_dir" >/dev/null
   printf '{"status":"ok","screenshots":"%s"}\n' "$screenshot_dir"
 fi
@@ -58,6 +58,8 @@ review_args=(
   "$SCRIPT_DIR/review_generated_deck.py"
   --deck "$generated_deck"
   --template "$template_deck"
+  --source "$SOURCE"
+  --screenshots-dir "$screenshot_dir"
   --min-score "$QUALITY_MIN_SCORE"
   --report-json "$review_json"
   --report-md "$review_md"

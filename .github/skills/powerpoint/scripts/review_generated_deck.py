@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import re
 
 from pptx import Presentation  # type: ignore[import-not-found]
 
@@ -235,7 +236,82 @@ def _score_user_clarity(deck: Any, backup_idx: int) -> CriterionResult:
     )
 
 
-def review_deck(deck_path: Path, template_path: Path) -> dict[str, Any]:
+def _topic_tokens_from_source(source_path: Path) -> list[str]:
+    """Extract a small set of topic tokens from source markdown/text."""
+    if not source_path.exists() or not source_path.is_file():
+        return []
+    text = source_path.read_text(encoding="utf-8", errors="replace").lower()
+    token_set: set[str] = set()
+    if "traveling salesman" in text or "tsp" in text:
+        token_set.update({"tsp", "traveling", "salesman", "quantum", "classical"})
+    for token in ("notebook", "qaoa", "vqe", "qiskit", "hypergraph", "delivery", "scope"):
+        if token in text:
+            token_set.add(token)
+    if token_set:
+        return sorted(token_set)
+
+    words = [word for word in re.findall(r"[a-z0-9]{4,}", text) if len(word) >= 4]
+    # Keep deterministic order with simple frequency ranking.
+    counts: dict[str, int] = {}
+    for word in words:
+        counts[word] = counts.get(word, 0) + 1
+    ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return [word for word, _ in ranked[:5]]
+
+
+def _score_source_relevance(deck: Any, backup_idx: int, source_path: Path) -> CriterionResult:
+    """Score whether front-slide language reflects the source topic."""
+    topics = _topic_tokens_from_source(source_path)
+    if not topics:
+        return CriterionResult(
+            name="Source Relevance",
+            score=3.0,
+            rationale="No stable source tokens detected; relevance scoring skipped.",
+        )
+
+    front_count = min(backup_idx, len(deck.slides))
+    front_text = "\n".join(
+        " ".join(_slide_lines(deck.slides[index])).lower()
+        for index in range(front_count)
+    )
+    matched = sum(1 for token in topics if token in front_text)
+    score = _ratio_score(matched, max(1, min(5, len(topics))))
+    return CriterionResult(
+        name="Source Relevance",
+        score=score,
+        rationale=f"{matched}/{len(topics)} source topic tokens detected in front-section slide text.",
+    )
+
+
+def _score_screenshot_coverage(deck: Any, backup_idx: int, screenshots_dir: Path) -> CriterionResult:
+    """Score whether screenshot rendering covers the complete front section."""
+    if not screenshots_dir.exists() or not screenshots_dir.is_dir():
+        return CriterionResult(
+            name="Screenshot Coverage",
+            score=1.0,
+            rationale="Screenshot directory missing; visual review evidence unavailable.",
+        )
+
+    files = [
+        path
+        for path in screenshots_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+    ]
+    front_count = min(backup_idx, len(deck.slides))
+    score = _ratio_score(min(len(files), front_count), max(1, front_count))
+    return CriterionResult(
+        name="Screenshot Coverage",
+        score=score,
+        rationale=f"{len(files)}/{front_count} expected front slides have rendered screenshot files.",
+    )
+
+
+def review_deck(
+    deck_path: Path,
+    template_path: Path,
+    source_path: Path | None = None,
+    screenshots_dir: Path | None = None,
+) -> dict[str, Any]:
     """Run full review and return structured payload."""
     deck = Presentation(str(deck_path))
     template = Presentation(str(template_path))
@@ -248,6 +324,11 @@ def review_deck(deck_path: Path, template_path: Path) -> dict[str, Any]:
         _score_placeholder_hygiene(deck, backup_idx),
         _score_user_clarity(deck, backup_idx),
     ]
+
+    if source_path is not None:
+        criteria.append(_score_source_relevance(deck, backup_idx, source_path))
+    if screenshots_dir is not None:
+        criteria.append(_score_screenshot_coverage(deck, backup_idx, screenshots_dir))
 
     composite = round(sum(item.score for item in criteria) / len(criteria), 2)
     if composite >= 4.0:
@@ -302,6 +383,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Review generated PowerPoint quality")
     parser.add_argument("--deck", required=True, help="Generated deck path")
     parser.add_argument("--template", required=True, help="Template path used for generation")
+    parser.add_argument("--source", help="Original source path used for generation")
+    parser.add_argument("--screenshots-dir", help="Rendered screenshot directory for the generated deck")
     parser.add_argument("--min-score", type=float, default=4.0, help="Minimum composite score")
     parser.add_argument("--report-json", required=True, help="Output JSON report path")
     parser.add_argument("--report-md", required=True, help="Output Markdown report path")
@@ -320,13 +403,24 @@ def main() -> int:
     template_path = Path(args.template).expanduser().resolve()
     report_json = Path(args.report_json).expanduser().resolve()
     report_md = Path(args.report_md).expanduser().resolve()
+    source_path = Path(args.source).expanduser().resolve() if args.source else None
+    screenshots_dir = (
+        Path(args.screenshots_dir).expanduser().resolve()
+        if args.screenshots_dir
+        else None
+    )
 
     if not deck_path.exists():
         raise SystemExit(f"deck not found: {deck_path}")
     if not template_path.exists():
         raise SystemExit(f"template not found: {template_path}")
 
-    payload = review_deck(deck_path, template_path)
+    payload = review_deck(
+        deck_path,
+        template_path,
+        source_path=source_path,
+        screenshots_dir=screenshots_dir,
+    )
     report_json.parent.mkdir(parents=True, exist_ok=True)
     report_md.parent.mkdir(parents=True, exist_ok=True)
 

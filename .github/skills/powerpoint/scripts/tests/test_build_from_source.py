@@ -222,6 +222,32 @@ def test_discover_visual_assets_includes_svg_candidates(tmp_path) -> None:
     assert any(path.suffix.lower() == ".svg" for path in assets)
 
 
+def test_discover_visual_assets_excludes_generic_scribble_for_tsp_topic(tmp_path) -> None:
+    """Generic UX scribbles must be ignored when source topic is TSP/quantum."""
+    seed = load_module("powerpoint_seed")
+    svg = load_module("powerpoint_svg")
+    sys.modules["powerpoint_seed"] = seed
+    sys.modules["powerpoint_svg"] = svg
+    factory = load_module("template_factory")
+    sys.modules["template_factory"] = factory
+    script = load_module("build_from_source")
+
+    source = tmp_path / "PROJECT.md"
+    source.write_text("# Project\nTraveling Salesman Problem (TSP) and quantum comparison", encoding="utf-8")
+
+    (tmp_path / "docs" / "ux" / "scribbles").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "ux" / "scribbles" / "generic-home-flow.svg").write_text("<svg />", encoding="utf-8")
+
+    (tmp_path / "docs" / "wiki" / "assets" / "visualizations").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "wiki" / "assets" / "visualizations" / "tsp-route-map.png").write_bytes(b"png")
+
+    discover_assets = getattr(script, "_discover_visual_assets")
+    assets = discover_assets(tmp_path, source)
+    names = [path.name for path in assets]
+    assert "tsp-route-map.png" in names
+    assert "generic-home-flow.svg" not in names
+
+
 def test_prepare_visual_asset_for_ppt_converts_svg_when_cairosvg_available(
     tmp_path, monkeypatch
 ) -> None:

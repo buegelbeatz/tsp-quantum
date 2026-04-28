@@ -733,14 +733,37 @@ def _dedupe_text(values: list[str]) -> list[str]:
     return result
 
 
-def _compact_issue_line(text: str, max_chars: int = 1200) -> str:
+def _compact_issue_line(text: str, max_chars: int = 240) -> str:
     """Normalize one issue line while preserving full planning semantics."""
     normalized = " ".join(text.strip().split())
     if not normalized:
         return ""
+    sentence_match = re.match(r"^(.*?[\.!?])(\s|$)", normalized)
+    if sentence_match and len(sentence_match.group(1)) >= 40:
+        normalized = sentence_match.group(1).strip()
     if len(normalized) <= max_chars:
         return normalized
     return normalized[:max_chars].rstrip(" .,:;-")
+
+
+def _clean_acceptance_candidate(text: str) -> str:
+    """Return a concise, delivery-suitable acceptance candidate line."""
+    candidate = _compact_issue_line(text, max_chars=220)
+    lowered = candidate.lower()
+    if not candidate:
+        return ""
+    if candidate.startswith(("🧭", "📘", "📊", "⚙️")):
+        return ""
+    if any(
+        token in lowered
+        for token in (
+            "enterprise project specification",
+            "bundle content",
+            "canonical english content",
+        )
+    ):
+        return ""
+    return candidate
 
 
 def _contains_notebook_scope(*texts: str) -> bool:
@@ -972,11 +995,12 @@ def _derive_acceptance_from_source_notes(source_notes: list[str], role: str) -> 
     """Build actionable acceptance criteria from expert source notes."""
     cleaned = _dedupe_text(
         [
-            note.rstrip(".") + "."
+            _clean_acceptance_candidate(note.rstrip(".") + ".")
             for note in source_notes
             if note and len(note.split()) >= 4
         ]
     )
+    cleaned = [item for item in cleaned if item]
     if cleaned:
         def _acceptance_priority(item: str) -> int:
             lowered = item.lower()
@@ -1000,6 +1024,10 @@ def _derive_acceptance_from_source_notes(source_notes: list[str], role: str) -> 
                 score += 4
             if any(token in lowered for token in ("/help", "command", "prompt")):
                 score += 2
+            if "this project specification outlines" in lowered:
+                score -= 5
+            if len(item) > 180:
+                score -= 2
             # Penalize generic classification statements.
             if "primary discovery interface" in lowered:
                 score -= 3
@@ -1317,6 +1345,10 @@ def _build_core_planning_artifacts(
     if planning_focus_line.strip().lower() == outcome_line.strip().lower():
         planning_focus_line = "Translate the approved theme into executable delivery work with explicit boundaries"
 
+    story_title = f"Define executable work packages for {title}"
+    if "delivery execution" not in title.lower() and "work package" not in title.lower():
+        story_title = f"Define executable work packages for {title}"
+
     epic = _render_template(
         templates["epic"],
         {
@@ -1349,20 +1381,20 @@ def _build_core_planning_artifacts(
             "stage": stage,
             "epic_id": epic_id,
             "story_id": story_id,
-            "title": f"Plan delivery for {title}",
+            "title": story_title,
             "badge_color": badge,
             "agent_role": "agile-coach",
             "date": timestamp(),
             "summary": "\n".join(
                 [
+                    "- Story outcome: convert the epic into one implementation-ready slice with clear ownership.",
                     f"- Delivery intent: {outcome_line}",
-                    f"- Coordination objective: {planning_focus_line}",
                 ]
             ),
             "planning_focus": "\n".join(
                 [
                     f"- Scope boundary: {planning_focus_line}",
-                    "- Keep operational delivery delegated to the linked task set.",
+                    "- Decompose work into one concrete implementation task and explicit acceptance checks.",
                 ]
             ),
             "readiness_signals": "\n".join(

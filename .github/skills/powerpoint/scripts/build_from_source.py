@@ -319,13 +319,38 @@ def _populate_template_slide(
         _render_body(body_box.text_frame, body, body_color)
 
     if visual_asset is not None:
+        visual_left = Inches(8.45)
+        visual_top = Inches(4.15)
+        visual_width = Inches(3.5)
+        visual_height = Inches(2.2)
+        text_overlaps = False
+        for shape in slide.shapes:
+            if not getattr(shape, "has_text_frame", False):
+                continue
+            sx = int(getattr(shape, "left", 0))
+            sy = int(getattr(shape, "top", 0))
+            sw = int(getattr(shape, "width", 0))
+            sh = int(getattr(shape, "height", 0))
+            if sw <= 0 or sh <= 0:
+                continue
+            if (
+                sx < visual_left + visual_width
+                and sx + sw > visual_left
+                and sy < visual_top + visual_height
+                and sy + sh > visual_top
+            ):
+                text_overlaps = True
+                break
+
+        if text_overlaps:
+            return
         try:
             slide.shapes.add_picture(
                 str(visual_asset),
-                Inches(8.6),
-                Inches(0.45),
-                width=Inches(3.8),
-                height=Inches(2.1),
+                visual_left,
+                visual_top,
+                width=visual_width,
+                height=visual_height,
             )
         except (ValueError, OSError, TypeError, AttributeError):
             # Best-effort only: keep slide generation robust when asset format is unsupported.
@@ -394,6 +419,26 @@ def _duplicate_slide(prs: Any, source_index: int) -> int:
 
 def _discover_visual_assets(repo_root: Path, source: Path) -> list[Path]:
     """Discover a small set of visual assets to enrich stakeholder slides."""
+    def _topic_tokens_from_source(path: Path) -> set[str]:
+        tokens: set[str] = set()
+        name_tokens = re.findall(r"[a-z0-9]+", path.stem.lower())
+        tokens.update(token for token in name_tokens if len(token) >= 3)
+        if path.exists() and path.is_file() and path.suffix.lower() in {".md", ".txt"}:
+            text = path.read_text(encoding="utf-8", errors="replace").lower()
+            if "traveling salesman" in text or "tsp" in text:
+                tokens.update({"tsp", "traveling", "salesman", "quantum", "classical"})
+            for token in ("notebook", "qaoa", "vqe", "qiskit", "hypergraph"):
+                if token in text:
+                    tokens.add(token)
+        return tokens
+
+    def _path_matches_topic(path: Path, topic_tokens: set[str]) -> bool:
+        if not topic_tokens:
+            return False
+        lowered = path.as_posix().lower()
+        stem_tokens = set(re.findall(r"[a-z0-9]+", path.stem.lower()))
+        return any(token in lowered for token in topic_tokens) or bool(stem_tokens & topic_tokens)
+
     def _stage_from_markdown(path: Path) -> str:
         if not path.exists() or path.suffix.lower() != ".md":
             return "project"
@@ -404,10 +449,13 @@ def _discover_visual_assets(repo_root: Path, source: Path) -> list[Path]:
         return "project"
 
     stage_name = _stage_from_markdown(source)
+    topic_tokens = _topic_tokens_from_source(source)
     roots = [
         source.parent / "assets",
         repo_root / ".digital-artifacts" / "40-stage" / "assets",
         repo_root / ".digital-artifacts" / "50-planning" / stage_name / "assets",
+        repo_root / ".digital-artifacts" / "10-data",
+        repo_root / ".digital-artifacts" / "60-review",
         repo_root / "docs" / "wiki" / "assets" / "visualizations",
         repo_root / "docs" / "images" / "mermaid",
         repo_root / "docs" / "wiki" / "assets",
@@ -420,9 +468,15 @@ def _discover_visual_assets(repo_root: Path, source: Path) -> list[Path]:
         for path in sorted(root.rglob("*")):
             if path.is_file() and path.suffix.lower() in allowed:
                 lowered = path.as_posix().lower()
-                if "docs/ux/scribbles" in lowered and "tsp" not in lowered and stage_name not in lowered:
+                if "docs/ux/scribbles" in lowered and not _path_matches_topic(path, topic_tokens):
                     continue
                 if "digital-generic-team" in path.name.lower() and stage_name not in lowered:
+                    continue
+                if "portraits" in lowered:
+                    continue
+                if "powerpoint" in lowered and "quality-review" in lowered:
+                    continue
+                if "10-data" in lowered and not any(token in lowered for token in ("plot", "chart", "figure", "visual", "map", "graph", "output", "result", "assets")):
                     continue
                 candidates.append(path)
                 if len(candidates) >= 8:
@@ -491,10 +545,28 @@ def _stage_sections(source: Path, layer: str) -> list[tuple[str, str]]:
     constraint_lines = [line for line in constraints if line.strip() and not _is_noise(line)][:6]
     question_lines = [line for line in open_questions if line.strip() and not _is_noise(line)][:4]
 
+    topic_hint = ""
+    for line in context_lines:
+        lowered = line.lower()
+        if "traveling salesman" in lowered or "tsp" in lowered:
+            topic_hint = line
+            break
+
+    opening_title = topic_hint or stage_title
+    opening_body = (
+        "Project stage briefing\n- Purpose: decision-ready summary for scope, delivery, and review status.\n- Focus: transform validated context into executable delivery work."
+    )
+    if topic_hint:
+        opening_body = (
+            "Decision-ready project briefing\n"
+            "- Focus: compare classical and quantum-inspired TSP approaches with transparent trade-offs.\n"
+            "- Outcome: align implementation scope, evidence, and next decisions for delivery."
+        )
+
     return [
         (
-            stage_title,
-            "Project stage briefing\n- Purpose: decision-ready summary for scope, delivery, and review status.\n- Focus: transform validated context into executable delivery work.",
+            opening_title,
+            opening_body,
         ),
         (
             "Executive Summary",

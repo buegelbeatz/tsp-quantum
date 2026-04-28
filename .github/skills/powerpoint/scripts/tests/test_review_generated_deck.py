@@ -98,3 +98,31 @@ def test_main_strict_returns_non_zero_when_quality_is_low(
     assert output["quality_review"]["recommendation"] in {"revise", "redesign"}
     assert report_json.exists()
     assert report_md.exists()
+
+
+def test_review_deck_adds_source_relevance_and_screenshot_criteria(tmp_path: Path) -> None:
+    reviewer = load_module("review_generated_deck")
+    template_path = tmp_path / "template.pptx"
+    deck_path = tmp_path / "deck.pptx"
+    source_path = tmp_path / "source.md"
+    screenshots_dir = tmp_path / "shots"
+
+    _build_template(template_path)
+    _build_good_deck(deck_path)
+    source_path.write_text(
+        "Traveling Salesman Problem (TSP) comparison between classical and quantum approaches.",
+        encoding="utf-8",
+    )
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "slide-001.png").write_bytes(b"png")
+
+    payload = reviewer.review_deck(
+        deck_path,
+        template_path,
+        source_path=source_path,
+        screenshots_dir=screenshots_dir,
+    )
+
+    criteria_names = [item["name"] for item in payload["criteria"]]
+    assert "Source Relevance" in criteria_names
+    assert "Screenshot Coverage" in criteria_names
