@@ -1070,7 +1070,7 @@ def _agent_review_markdown(
     stage: str,
     agent: str,
     bundle,
-    source_text: str,
+    source_text: str = "",
     score: int,
     recommendation: str,
     applicability: str,

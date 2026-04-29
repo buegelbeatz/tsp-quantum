@@ -138,8 +138,21 @@ is_active_session_path() {
 
 path_size_bytes() {
   local path="$1"
+  local size_output=""
   if [[ -f "$path" ]]; then
-    stat -f %z "$path" 2>/dev/null || stat -c %s "$path" 2>/dev/null || echo 0
+    size_output="$(stat -c %s "$path" 2>/dev/null || true)"
+    if [[ "$size_output" =~ ^[0-9]+$ ]]; then
+      echo "$size_output"
+      return 0
+    fi
+
+    size_output="$(stat -f %z "$path" 2>/dev/null || true)"
+    if [[ "$size_output" =~ ^[0-9]+$ ]]; then
+      echo "$size_output"
+      return 0
+    fi
+
+    echo 0
   elif [[ -d "$path" ]]; then
     du -sk "$path" 2>/dev/null | awk '{print $1 * 1024}'
   else

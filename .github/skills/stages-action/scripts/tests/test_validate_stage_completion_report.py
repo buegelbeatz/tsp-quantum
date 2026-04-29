@@ -148,3 +148,21 @@ def test_validate_report_allows_dry_run_without_powerpoint_post_gate(tmp_path: P
     report.write_text(content, encoding="utf-8")
 
     module.validate_report(report, stage, max_age_hours=24)
+
+
+def test_validate_report_allows_project_noop_without_powerpoint_post_gate(tmp_path: Path) -> None:
+    module = _load_module()
+    stage = "project"
+    report = tmp_path / REPORT_FILENAME
+    content = _report_content(stage, datetime.now(timezone.utc))
+    content = content.replace("- powerpoint_required: true", "- powerpoint_required: false")
+    content = content.replace(
+        "- powerpoint_post_gate_executed: true",
+        "- powerpoint_post_gate_executed: false",
+    )
+    content = content.replace("- powerpoint_wiki_exists: true", "- powerpoint_wiki_exists: false")
+    content = content.replace("- powerpoint_source_exists: true", "- powerpoint_source_exists: false")
+    content = content.replace("- powerpoint_hash_match: true", "- powerpoint_hash_match: false")
+    report.write_text(content, encoding="utf-8")
+
+    module.validate_report(report, stage, max_age_hours=24)

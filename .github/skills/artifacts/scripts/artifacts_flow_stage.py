@@ -767,14 +767,13 @@ def _stage_document_content(
         for item in blocked_specs
         if str(item.get("bundle_id", "")).strip()
     ]
-    has_ready_specs = len(stage_specs) > 0
-    can_define_epic = has_ready_specs
-    ready_for_planning = has_ready_specs and can_define_epic
+    has_ready_specs = bool(stage_specs)
+    ready_for_planning = has_ready_specs or not blocked_specs
     stage_status = "active" if ready_for_planning else "in-progress"
-    if ready_for_planning and blocked_bundle_ids:
-        gate_reason = (
-            "stage is ready for planning with quarantined blocked bundles"
-        )
+    if not has_ready_specs and not blocked_specs:
+        gate_reason = "stage has no specification bundles to plan"
+    elif ready_for_planning and blocked_bundle_ids:
+        gate_reason = "stage is ready for planning with quarantined blocked bundles"
     elif ready_for_planning:
         gate_reason = "stage is ready for planning"
     else:

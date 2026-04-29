@@ -35,13 +35,17 @@ emit_yaml_and_exit() {
   exit "$status_code"
 }
 
-if ! github_require_token; then
+if [[ -z "${GH_TOKEN:-}" && -z "${GITHUB_TOKEN:-}" ]]; then
   missing_yaml="api_version: \"v1\"\nkind: \"gh_token_report\"\nstatus: \"error\"\nmessage: \"GH_TOKEN is not set\"\nrequired_scopes:\n"
   for scope_name in "${required_scopes[@]}"; do
     missing_yaml+="  - \"$scope_name\"\n"
   done
   missing_yaml+="instructions:\n  - \"Create a Personal Access Token in GitHub Settings > Developer settings > Personal access tokens.\"\n  - \"For classic tokens add at least: repo, project, read:org, read:discussion.\"\n  - \"For fine-grained tokens grant repository issues/metadata/wiki write and project read/write where needed.\"\n  - \"Set GH_TOKEN in .env (never commit .env).\""
   emit_yaml_and_exit "$missing_yaml" 1
+fi
+
+if [[ -z "${GH_TOKEN:-}" && -n "${GITHUB_TOKEN:-}" ]]; then
+  export GH_TOKEN="$GITHUB_TOKEN"
 fi
 
 api_response="$(github_run_gh api -i /user 2>/dev/null || true)"

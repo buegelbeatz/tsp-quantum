@@ -113,22 +113,11 @@ _elapsed_seconds() {
   echo "$((now - RUN_START_EPOCH))"
 }
 
-_stage_powerpoint_source_relpath() {
-  local stage_name="${1:-$STAGE}"
-  local layer_id
-  layer_id="$(_active_layer_id)"
-  echo "docs/powerpoints/${layer_id}_${stage_name}.pptx"
-}
+_stage_powerpoint_source_relpath() { local stage_name="${1:-$STAGE}" layer_id; [[ "$stage_name" == "project" ]] && _project_powerpoint_source_relpath || { layer_id="$(_active_layer_id)"; echo "docs/powerpoints/${layer_id}_${stage_name}.pptx"; }; }
 
-_active_layer_id() {
-  local configured
-  configured="${DIGITAL_LAYER_ID:-${DIGITAL_TEAM_LAYER_ID:-}}"
-  if [[ -n "$configured" ]]; then
-    echo "$configured"
-    return 0
-  fi
-  basename "$REPO_ROOT"
-}
+_project_powerpoint_source_relpath() { echo "docs/powerpoints/digital-generic-team_project.pptx"; }
+
+_active_layer_id() { local configured="${DIGITAL_LAYER_ID:-${DIGITAL_TEAM_LAYER_ID:-}}"; [[ -n "$configured" ]] && { echo "$configured"; return 0; }; basename "$REPO_ROOT"; }
 
 _cleanup_legacy_markdown_aliases() {
   local canonical_path="$1"
@@ -1072,6 +1061,10 @@ _resolve_github_repo_slug() {
   printf ''
 }
 
+_latest_delivery_status() { local f="$(_latest_stage_review_file "$DELIVERY_STATUS_FILENAME" "$DELIVERY_STATUS_LEGACY_FILENAMES")"; [[ -f "$f" ]] && grep -E '^- status:' "$f" 2>/dev/null | head -n1 | sed -E 's/^- status:[[:space:]]*//' | tr -d '"' || true; }
+
+_is_noop_stage_run() { local selected_count="$(_stage_doc_field "selected_bundle_count" || true)" blocked_count="$(_stage_doc_field "blocked_bundle_count" || true)"; [[ "$(_latest_delivery_status)" == "no_ready_tasks" && "${selected_count:-0}" == "0" && "${blocked_count:-0}" == "0" ]]; }
+
 _enforce_mandatory_primary_sync_gate() {
   local primary_sync_raw dispatch_found dispatch_file
   local local_board_ref_count remote_board_ref_count
@@ -1112,6 +1105,10 @@ _enforce_mandatory_primary_sync_gate() {
   done < <(find "$REPO_ROOT/.digital-artifacts/50-planning/$STAGE" -maxdepth 1 -type f -name 'DISPATCH_*.md' 2>/dev/null | sort)
 
   if [[ "$dispatch_found" != "1" ]]; then
+    if _is_noop_stage_run; then
+      echo "[stages-action] INFO: mandatory GitHub sync gate skipped for no-op stage '$STAGE' (no dispatch traces, no selected bundles)"
+      return 0
+    fi
     echo "[stages-action] ERROR: mandatory GitHub sync gate failed: no dispatch traces found for stage '$STAGE'"
     return 1
   fi
@@ -1149,7 +1146,7 @@ _enforce_mandatory_primary_sync_gate() {
   if [[ "$STAGE" == "project" ]]; then
     local ppt_source_path ppt_wiki_path ppt_source_sha256 ppt_wiki_sha256 ppt_remote_count
 
-    ppt_source_path="$REPO_ROOT/$(_stage_powerpoint_source_relpath "$STAGE")"
+    ppt_source_path="$REPO_ROOT/$(_project_powerpoint_source_relpath)"
     ppt_wiki_path="$REPO_ROOT/$(_stage_wiki_powerpoint_relpath "$STAGE")"
     if [[ ! -f "$ppt_source_path" || ! -f "$ppt_wiki_path" ]]; then
       echo "[stages-action] ERROR: mandatory GitHub sync gate failed: local PowerPoint artifacts are incomplete"
@@ -1415,7 +1412,7 @@ _write_stage_completion_report() {
     recommendation_lines="- none"$'\n'
   fi
 
-  local github_issue_open_total github_wiki_status github_wiki_url
+  local github_issue_open_total github_wiki_status github_wiki_url ppt_required
 
   ppt_wiki_path="$(_stage_wiki_powerpoint_relpath "$STAGE")"
   ppt_source_path="$(_stage_powerpoint_source_relpath "$STAGE")"
@@ -1427,6 +1424,7 @@ _write_stage_completion_report() {
   ppt_wiki_mtime_utc="n/a"
   ppt_source_mtime_utc="n/a"
   ppt_post_gate_executed="false"
+  ppt_required="$([[ "$STAGE" == "project" && "$(_latest_delivery_status)" =~ ^(triggered|already_dispatched)$ ]] && echo true || echo false)"
 
   if [[ -f "$REPO_ROOT/$ppt_wiki_path" ]]; then
     ppt_wiki_exists="true"
@@ -1441,7 +1439,7 @@ _write_stage_completion_report() {
   if [[ "$ppt_wiki_exists" == "true" && "$ppt_source_exists" == "true" && "$ppt_wiki_sha256" == "$ppt_source_sha256" ]]; then
     ppt_hash_match="true"
   fi
-  if [[ "$STAGE" == "project" && "$ppt_hash_match" == "true" ]]; then
+  if [[ "$ppt_required" == "true" && "$ppt_hash_match" == "true" ]]; then
     ppt_post_gate_executed="true"
   fi
   # Explicit regeneration signal: true when post-gate passed (deck exists, matches wiki copy).
@@ -1492,7 +1490,7 @@ _write_stage_completion_report() {
 - loc_delta: ${loc_delta}
 - workflow_code_debt_delta: ${workflow_code_debt_delta}
 - workflow_code_debt_monotonic_status: ${workflow_code_debt_monotonic_status}
-- powerpoint_required: $([[ "$STAGE" == "project" ]] && echo true || echo false)
+- powerpoint_required: ${ppt_required}
 - powerpoint_post_gate_executed: ${ppt_post_gate_executed}
 - powerpoint_regenerated: ${ppt_regenerated}
 - powerpoint_generated_at: ${ppt_generated_at}

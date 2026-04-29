@@ -8,7 +8,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LAYER_ROOT = Path(__file__).resolve().parents[4]
+GITHUB_ROOT = Path(__file__).resolve().parents[5]
+SKILLS_ROOT = Path(__file__).resolve().parents[4]
 ASSIGN = ROOT / "scripts" / "task-assign.sh"
 VALIDATE = ROOT / "scripts" / "task-validate-handoff.sh"
 APPROVE = ROOT / "scripts" / "task-approve-gate.sh"
@@ -16,11 +17,11 @@ AUDIT = ROOT / "scripts" / "task-audit-log.sh"
 HOOKS_INSTALL = ROOT / "scripts" / "task-hooks-install.sh"
 HOOKS_RUN = ROOT / "scripts" / "task-hooks-run.sh"
 AUDIT_TOGGLE = ROOT / "scripts" / "task-audit-toggle.sh"
-PROMPT_INVOKE = LAYER_ROOT / "hooks" / "prompt-invoke.sh"
+PROMPT_INVOKE = GITHUB_ROOT / "hooks" / "prompt-invoke.sh"
 GOVERNANCE = (
-    LAYER_ROOT / "skills" / "shared/shell" / "scripts" / "lib" / "governance.sh"
+    GITHUB_ROOT / "skills" / "shared/shell" / "scripts" / "lib" / "governance.sh"
 )
-COMMON = LAYER_ROOT / "skills" / "shared/shell" / "scripts" / "lib" / "common.sh"
+COMMON = GITHUB_ROOT / "skills" / "shared/shell" / "scripts" / "lib" / "common.sh"
 
 
 def _run(script: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -759,7 +760,7 @@ def test_post_message_hook_handles_empty_optional_args(tmp_path: Path) -> None:
     github_scripts.mkdir(parents=True)
 
     (repo_dir / ".github" / "hooks" / "post-message.sh").write_text(
-        (LAYER_ROOT / "hooks" / "post-message.sh").read_text(encoding="utf-8"),
+        (GITHUB_ROOT / "hooks" / "post-message.sh").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     (github_scripts / "task-audit-log.sh").write_text(
@@ -808,11 +809,11 @@ def test_prompt_invoke_groups_pre_post_into_single_audit_file(tmp_path: Path) ->
     digital_team_lib.mkdir(parents=True)
 
     (github_hooks / "pre-message.sh").write_text(
-        (LAYER_ROOT / "hooks" / "pre-message.sh").read_text(encoding="utf-8"),
+        (GITHUB_ROOT / "hooks" / "pre-message.sh").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     (github_hooks / "post-message.sh").write_text(
-        (LAYER_ROOT / "hooks" / "post-message.sh").read_text(encoding="utf-8"),
+        (GITHUB_ROOT / "hooks" / "post-message.sh").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     (github_scripts / "task-audit-log.sh").write_text(
@@ -1197,8 +1198,8 @@ def test_prompt_invoke_project_exports_master_audit_context(tmp_path: Path) -> N
         repo_dir / ".github" / "skills" / "shared/shell" / "scripts" / "lib"
     )
     digital_team_lib.mkdir(parents=True)
-    governance_src = LAYER_ROOT / "shared" / "shell" / "scripts" / "lib" / "governance.sh"
-    common_src = LAYER_ROOT / "shared" / "shell" / "scripts" / "lib" / "common.sh"
+    governance_src = SKILLS_ROOT / "shared" / "shell" / "scripts" / "lib" / "governance.sh"
+    common_src = SKILLS_ROOT / "shared" / "shell" / "scripts" / "lib" / "common.sh"
     (digital_team_lib / "governance.sh").write_text(
         governance_src.read_text(encoding="utf-8"), encoding="utf-8"
     )
@@ -1208,7 +1209,7 @@ def test_prompt_invoke_project_exports_master_audit_context(tmp_path: Path) -> N
 
     env = os.environ.copy()
     env["DIGITAL_AUDIT_ENABLED"] = "0"
-    prompt_invoke_src = Path(__file__).resolve().parents[5] / "hooks" / "prompt-invoke.sh"
+    prompt_invoke_src = GITHUB_ROOT / "hooks" / "prompt-invoke.sh"
     result = subprocess.run(
         [
             "/bin/bash",

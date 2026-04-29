@@ -18,8 +18,8 @@ make stages-action STAGE=<stage>
 Example:
 
 ```bash
-TARGET_REPO_ROOT=/Users/becchri1/Documents/tsp-quantum \
-TARGET_REPO_SLUG=becchri1/tsp-quantum \
+TARGET_REPO_ROOT=/absolute/path/to/target-repo \
+TARGET_REPO_SLUG=owner/target-repo \
 make stages-action STAGE=project
 ```
 

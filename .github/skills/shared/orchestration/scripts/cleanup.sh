@@ -25,6 +25,7 @@ CONFIRM=0
 RUN_GITHUB=1
 RUN_REMOTE=1
 TARGET_BOARD=""
+LOCAL_E2E=0
 
 usage() {
   cat <<EOF
@@ -37,6 +38,7 @@ Options:
   --github <0|1>       MUST be 1 (/cleanup requires GitHub cleanup)
   --remote <0|1>       MUST be 1 (/cleanup requires remote ref cleanup)
   --board <name>       Restrict board ref cleanup to one board
+  --local-e2e          Bypass GitHub/remote enforcement for isolated local e2e checks
   -h, --help           Show this help
 
 Examples:
@@ -76,6 +78,10 @@ while [[ $# -gt 0 ]]; do
       TARGET_BOARD="${2:-}"
       shift 2
       ;;
+    --local-e2e)
+      LOCAL_E2E=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -105,7 +111,8 @@ if [[ -n "$TARGET_REPO_ROOT_EFFECTIVE" ]]; then
         --confirm "$CONFIRM" \
         --github "$RUN_GITHUB" \
         --remote "$RUN_REMOTE" \
-        --board "$TARGET_BOARD"
+        --board "$TARGET_BOARD" \
+        $( [[ "$LOCAL_E2E" == "1" ]] && printf '%s' "--local-e2e" || true )
   fi
   REPO_ROOT="$TARGET_REPO_ROOT_EFFECTIVE"
 fi
@@ -125,8 +132,10 @@ source "$GITHUB_LIB"
 [[ -f "$BOARD_CONFIG" ]] || die "Missing board config helper: $BOARD_CONFIG"
 
 # Mandatory contract for /cleanup: GitHub + remote board refs are always required.
-[[ "$RUN_GITHUB" == "1" ]] || die "/cleanup requires GitHub cleanup; --github 0 is not allowed"
-[[ "$RUN_REMOTE" == "1" ]] || die "/cleanup requires remote ref cleanup; --remote 0 is not allowed"
+if [[ "$LOCAL_E2E" != "1" ]]; then
+  [[ "$RUN_GITHUB" == "1" ]] || die "/cleanup requires GitHub cleanup; --github 0 is not allowed"
+  [[ "$RUN_REMOTE" == "1" ]] || die "/cleanup requires remote ref cleanup; --remote 0 is not allowed"
+fi
 
 if [[ "$DRY_RUN" == "0" && "$CONFIRM" != "1" ]]; then
   if [[ -t 0 ]]; then
@@ -439,5 +448,5 @@ log_info "cleanup started (dry_run=$DRY_RUN, github=$RUN_GITHUB, remote=$RUN_REM
 cleanup_board_refs
 cleanup_local_wiki_docs
 cleanup_generated_artifacts
-cleanup_github
+[[ "$RUN_GITHUB" == "1" ]] && cleanup_github
 log_info "cleanup finished"

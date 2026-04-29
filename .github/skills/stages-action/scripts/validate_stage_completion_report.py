@@ -129,7 +129,8 @@ def validate_report(report_path: Path, stage: str, max_age_hours: int) -> None:
             f"Report is stale: generated_at={generated_at.isoformat()} older than {max_age_hours}h",
         )
 
-    # Project stage has a mandatory post-run PowerPoint synchronization gate.
+    # Project stage has a mandatory post-run PowerPoint synchronization gate
+    # only when the run actually dispatched delivery work.
     if stage == "project":
         dry_run_mode = _extract_value(lines, "dry_run_mode")
         ppt_required = _extract_value(lines, "powerpoint_required")
@@ -138,9 +139,7 @@ def validate_report(report_path: Path, stage: str, max_age_hours: int) -> None:
         ppt_source_exists = _extract_value(lines, "powerpoint_source_exists")
         ppt_hash_match = _extract_value(lines, "powerpoint_hash_match")
 
-        if ppt_required != "true":
-            raise ValueError("Project stage report must declare '- powerpoint_required: true'")
-        if dry_run_mode != "true":
+        if dry_run_mode != "true" and ppt_required == "true":
             if ppt_executed != "true":
                 raise ValueError(
                     "Project stage report missing PowerPoint post-gate execution proof",

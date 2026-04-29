@@ -104,6 +104,25 @@ def test_stage_runtime_enforces_mandatory_github_sync_gate() -> None:
     assert 'git ls-remote --heads origin "refs/board/${STAGE}/*"' not in script_text
 
 
+def test_stage_runtime_allows_project_noop_runs_to_skip_sync_gate() -> None:
+    """Project runs with no selected bundles must not fail the GitHub sync gate for missing dispatch traces."""
+    repo_root = _repo_root()
+    script_text = (
+        repo_root
+        / ".github"
+        / "skills"
+        / "stages-action"
+        / "scripts"
+        / "stages-action.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "mandatory GitHub sync gate skipped for no-op stage" in script_text
+    assert "_is_noop_stage_run()" in script_text
+    assert '"$(_latest_delivery_status)" == "no_ready_tasks"' in script_text
+    assert '"${selected_count:-0}" == "0"' in script_text
+    assert '"${blocked_count:-0}" == "0"' in script_text
+
+
 def test_stage_runtime_emits_completion_brief_sections() -> None:
     """Runtime must print dedicated completion brief sections after /project execution."""
     repo_root = _repo_root()
@@ -193,3 +212,40 @@ def test_stage_runtime_project_post_gate_uses_project_briefing_file() -> None:
     assert "_sync_project_wiki_post_gate" in script_text
     assert 'ppt_source_path="$REPO_ROOT/$(_project_powerpoint_source_relpath)"' in script_text
     assert "digital-generic-team_40-stage.pptx" not in script_text
+
+
+def test_validates_stage_skill_dependencies_before_execution() -> None:
+    """Stage frontdoor targets must enforce preflight dependency checks before execution."""
+    repo_root = _repo_root()
+    commands_text = (repo_root / ".github" / "make" / "commands.mk").read_text(encoding="utf-8")
+
+    assert "stages-action: preflight" in commands_text
+    assert "project: preflight" in commands_text
+    assert "exploration: preflight" in commands_text
+
+
+def test_exports_dependency_validation_evidence_in_completion_report() -> None:
+    """Runtime completion evidence must include observability lines for stage gate outcomes."""
+    repo_root = _repo_root()
+    script_text = (
+        repo_root
+        / ".github"
+        / "skills"
+        / "stages-action"
+        / "scripts"
+        / "stages-action.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "OBSERVABILITY ready_for_planning" in script_text
+    assert "workflow_code_debt_monotonic_status" in script_text
+    assert "mandatory GitHub sync gate failed" in script_text
+
+
+def test_commands_frontdoor_runs_dependency_validation_for_stage_targets() -> None:
+    """Canonical stage frontdoors must route through preflight before stage runtime."""
+    repo_root = _repo_root()
+    commands_text = (repo_root / ".github" / "make" / "commands.mk").read_text(encoding="utf-8")
+
+    assert "check-delivery-work: preflight" in commands_text
+    assert "project-e2e: preflight" in commands_text
+    assert "bash $(_STAGES_ACTION_SCRIPT)" in commands_text

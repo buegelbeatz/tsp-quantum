@@ -221,7 +221,7 @@ render_handoff_snippets_markdown() {
   local primary_handoff_file="${2:-}"
   local -a handoff_paths=()
   local -a artifact_array=()
-  local artifact trimmed found_handoff existing_handoff
+  local artifact trimmed
 
   IFS=',' read -r -a artifact_array <<<"$artifacts_csv"
   for artifact in "${artifact_array[@]:-}"; do
@@ -231,29 +231,17 @@ render_handoff_snippets_markdown() {
       continue
     fi
 
-    found_handoff="0"
-    for existing_handoff in "${handoff_paths[@]:-}"; do
-      if [[ "$existing_handoff" == "$trimmed" ]]; then
-        found_handoff="1"
-        break
-      fi
-    done
-    if [[ "$found_handoff" == "0" ]]; then
-      handoff_paths+=("$trimmed")
-    fi
+    case " ${handoff_paths[*]:-} " in
+      *" ${trimmed} "*) ;;
+      *) handoff_paths+=("$trimmed") ;;
+    esac
   done
 
   if [[ -n "$primary_handoff_file" ]] && is_handoff_artifact_path "$primary_handoff_file"; then
-    found_handoff="0"
-    for existing_handoff in "${handoff_paths[@]:-}"; do
-      if [[ "$existing_handoff" == "$primary_handoff_file" ]]; then
-        found_handoff="1"
-        break
-      fi
-    done
-    if [[ "$found_handoff" == "0" ]]; then
-      handoff_paths+=("$primary_handoff_file")
-    fi
+    case " ${handoff_paths[*]:-} " in
+      *" ${primary_handoff_file} "*) ;;
+      *) handoff_paths+=("$primary_handoff_file") ;;
+    esac
   fi
 
   if [[ "${#handoff_paths[@]}" -eq 0 ]]; then
@@ -263,7 +251,6 @@ render_handoff_snippets_markdown() {
   printf '### Handoff Snippets\n\n'
   printf 'Captured handoff request/response payload snippets for this run.\n\n'
 
-  local pair_count=0
   local -a pair_keys=()
   local -a pair_requests=()
   local -a pair_responses=()
@@ -273,7 +260,7 @@ render_handoff_snippets_markdown() {
     [[ "$pair_side" != "none" ]] || continue
     pair_key="$(handoff_pair_key "$handoff_path_item")"
     pair_found="0"
-    for ((pair_index=0; pair_index<pair_count; pair_index++)); do
+    for ((pair_index=0; pair_index<${#pair_keys[@]}; pair_index++)); do
       if [[ "${pair_keys[$pair_index]}" == "$pair_key" ]]; then
         pair_found="1"
         if [[ "$pair_side" == "request" ]]; then
@@ -285,23 +272,22 @@ render_handoff_snippets_markdown() {
       fi
     done
     if [[ "$pair_found" == "0" ]]; then
-      pair_keys[$pair_count]="$pair_key"
+      pair_keys[${#pair_keys[@]}]="$pair_key"
       if [[ "$pair_side" == "request" ]]; then
-        pair_requests[$pair_count]="1"
-        pair_responses[$pair_count]="0"
+        pair_requests[${#pair_requests[@]}]="1"
+        pair_responses[${#pair_responses[@]}]="0"
       else
-        pair_requests[$pair_count]="0"
-        pair_responses[$pair_count]="1"
+        pair_requests[${#pair_requests[@]}]="0"
+        pair_responses[${#pair_responses[@]}]="1"
       fi
-      pair_count=$((pair_count + 1))
     fi
   done
 
-  if [[ "$pair_count" -gt 0 ]]; then
+  if [[ "${#pair_keys[@]}" -gt 0 ]]; then
     local complete_pairs=0
     local missing_response_pairs=0
     local missing_request_pairs=0
-    for ((pair_index=0; pair_index<pair_count; pair_index++)); do
+    for ((pair_index=0; pair_index<${#pair_keys[@]}; pair_index++)); do
       if [[ "${pair_requests[$pair_index]}" == "1" && "${pair_responses[$pair_index]}" == "1" ]]; then
         complete_pairs=$((complete_pairs + 1))
       elif [[ "${pair_requests[$pair_index]}" == "1" ]]; then
@@ -315,7 +301,7 @@ render_handoff_snippets_markdown() {
 
   local handoff_snippet_max_lines=120
   local handoff_path_item handoff_abs handoff_content handoff_protocol_label
-  local handoff_line_count handoff_truncated
+  local handoff_line_count handoff_truncated handoff_suffix
   for handoff_path_item in "${handoff_paths[@]:-}"; do
     handoff_abs="$(resolve_repo_absolute_path "$handoff_path_item")"
     if [[ ! -f "$handoff_abs" ]]; then
@@ -333,11 +319,9 @@ render_handoff_snippets_markdown() {
     fi
 
     printf '<details>\n'
-    if [[ "$handoff_truncated" == "yes" ]]; then
-      printf '<summary>%s: %s (truncated to %s lines)</summary>\n\n' "$handoff_protocol_label" "$handoff_path_item" "$handoff_snippet_max_lines"
-    else
-      printf '<summary>%s: %s</summary>\n\n' "$handoff_protocol_label" "$handoff_path_item"
-    fi
+    handoff_suffix=""
+    [[ "$handoff_truncated" == "yes" ]] && handoff_suffix=" (truncated to ${handoff_snippet_max_lines} lines)"
+    printf '<summary>%s: %s%s</summary>\n\n' "$handoff_protocol_label" "$handoff_path_item" "$handoff_suffix"
     printf '```yaml\n'
     printf '%s\n' "$handoff_content"
     printf '```\n'
