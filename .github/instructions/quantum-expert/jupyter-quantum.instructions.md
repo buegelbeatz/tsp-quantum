@@ -229,6 +229,12 @@ Notebook must pass:
 - Kernel restart
 - Run all cells successfully
 
+Runtime and kernel policy:
+- In layer repositories, use `.digital-runtime/layers/python-runtime/venv` and do not create repository-root `venv` or `.venv`.
+- In app repositories, use a dedicated runtime under `.digital-runtime/layers/<app-runtime>/venv`.
+- Install dependencies only through the active runtime interpreter.
+- Register the notebook kernel from the active runtime interpreter.
+
 ---
 
 # 4. Backend Governance
@@ -269,6 +275,16 @@ Recommended:
 
 ```
 jupyter nbconvert --to notebook --execute notebooks/02_quantum_circuit.ipynb
+```
+
+Mandatory validity checks before commit:
+
+```bash
+# strict JSON validity
+python3 -m json.tool notebooks/<quantum-notebook>.ipynb >/dev/null
+
+# nbformat structural validity
+python3 -c "import nbformat; nbformat.read('notebooks/<quantum-notebook>.ipynb', as_version=4)"
 ```
 
 Real hardware execution must not be part of CI.

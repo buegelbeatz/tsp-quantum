@@ -127,26 +127,38 @@ np.random.seed(SEED)
 - Restart kernel → Run all must succeed.
 
 Environment activation policy:
-- In app repositories, use exactly one project virtual environment at the repository root: `.venv`.
-- In layer repositories, do not create a root `.venv`; use the single shared layer runtime environment at `.digital-runtime/layers/python-runtime/venv`.
-- Do not create parallel environments like `.venv-1`.
-- Install notebook dependencies from `requirements.txt`.
-- Register and select the kernel from the active repository runtime: root `.venv` for app repositories, shared `python-runtime` venv for layer repositories.
+- In layer repositories, do not create a repository-root virtual environment. Use the shared layer runtime environment at `.digital-runtime/layers/python-runtime/venv`.
+- In app repositories, do not use `venv` or `.venv` at repository root. Use one dedicated runtime environment under `.digital-runtime/layers/<app-runtime>/venv`.
+- Do not create parallel environments for the same runtime intent.
+- Install notebook dependencies using the active runtime interpreter and pip from that interpreter.
+- Register and select the kernel from the active runtime interpreter.
 
 Recommended setup commands:
 
 ```
-make venv-bootstrap-notebook
+make layer-venv-sync
 ```
 
-If an app-level `.venv` already exists:
+Layer repository kernel registration example:
 
 ```
-make venv-install-minimal
-make venv-register-kernel
+source .digital-runtime/layers/python-runtime/venv/bin/activate
+python3 -m ipykernel install --user --name python-runtime --display-name "Python (python-runtime)"
 ```
 
-If you are working in a layer repository instead, sync and reuse the shared layer runtime environment and register its interpreter as the notebook kernel.
+App repository dedicated runtime example:
+
+```
+python3 -m venv .digital-runtime/layers/<app-runtime>/venv
+source .digital-runtime/layers/<app-runtime>/venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+python3 -m ipykernel install --user --name <app-runtime> --display-name "Python (<app-runtime>)"
+```
+
+Dependency source policy:
+- Layer repositories: dependencies are declared in skill-level `requirements.txt` files and synchronized via `make layer-venv-sync`.
+- App repositories: dependencies are declared in `requirements.txt` or `pyproject.toml` and installed only into `.digital-runtime/layers/<app-runtime>/venv`.
 
 Minimal `requirements.txt` snippet for notebooks:
 
@@ -270,6 +282,21 @@ Add notebook validation to CI:
 - Execute critical notebooks
 - Validate import structure
 - Enforce output stripping
+
+Minimum validity checks to prevent GitHub "Invalid Notebook" errors:
+
+```bash
+# 1) strict JSON parse
+python3 -m json.tool notebooks/<notebook>.ipynb >/dev/null
+
+# 2) notebook schema parse (nbformat)
+python3 -c "import nbformat; nbformat.read('notebooks/<notebook>.ipynb', as_version=4)"
+
+# 3) optional execution check (headless)
+jupyter nbconvert --to notebook --execute notebooks/<notebook>.ipynb
+```
+
+If a notebook is generated or edited by tooling, always re-run checks (1) and (2) before commit.
 
 ---
 
