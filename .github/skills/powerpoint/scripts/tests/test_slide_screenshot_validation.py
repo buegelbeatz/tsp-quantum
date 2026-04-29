@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -8,6 +9,11 @@ from pathlib import Path
 import pytest
 
 from test_helpers import load_module
+
+try:
+    importlib.import_module("cairosvg")
+except (ImportError, OSError) as exc:  # pragma: no cover - environment-dependent
+    pytest.skip(f"Cairo runtime unavailable: {exc}", allow_module_level=True)
 
 pptx_mod = pytest.importorskip("pptx")
 Presentation = pptx_mod.Presentation

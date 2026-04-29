@@ -95,6 +95,7 @@ test: preflight layer-venv-sync ## Run repository unit tests
 	@bash $(_CLEANUP_E2E_SCRIPT) \
 	  --repo-root "$$(pwd)" \
 	  --github-test "$${GITHUB_TEST:-0}"
+	@echo "INFO total=make-test complete=1"
 
 quality: preflight layer-venv-sync ## Canonical quality workflow and report (tests/coverage/lint/typing/security)
 	@bash $(_PROMPT_INVOKE_SCRIPT) --prompt-name quality --summary "/quality -> quality-expert-orchestrator" -- \
@@ -379,7 +380,8 @@ push-all:
 	@echo "[✓] All branches pushed to both repositories"
 
 help: ## Show available targets
-	@echo "" && \
+	@grep -hE '^[a-zA-Z0-9_.-]+:.*## ' $(MAKEFILE_LIST) >/dev/null && \
+	echo "" && \
 	echo "Core targets:" && \
 	echo "  help                           Show this curated target list" && \
 	echo "  project                        Run /project stage workflow" && \

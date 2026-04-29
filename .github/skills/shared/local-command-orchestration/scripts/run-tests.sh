@@ -45,6 +45,8 @@ CONTAINER_REQUIREMENTS="${DIGITAL_TEAM_TEST_REQUIREMENTS:-}"
 CONTAINER_COVERAGE_FILE="${DIGITAL_TEAM_CONTAINER_COVERAGE_FILE:-/workspace/.tests/python/coverage/.coverage}"
 CONTAINER_DEPS="${DIGITAL_TEAM_TEST_CONTAINER_DEPS:-pytest pytest-cov coverage ruff}"
 
+[[ -z "${DIGITAL_TEAM_COVERAGE_THRESHOLD+x}" && ( -n "$TEST_COMMAND" || -n "${DIGITAL_TEAM_TEST_TARGET+x}" || -n "$TEST_EXPR" ) ]] && COVERAGE_THRESHOLD="0"
+
 mkdir -p "$(dirname "$COVERAGE_FILE_PATH")"
 mkdir -p "$REPORT_DIR"
 
@@ -293,7 +295,7 @@ run_container_command() {
     -v "$REPO_ROOT:/workspace" \
     -w /workspace \
     "$CONTAINER_IMAGE" \
-    bash -lc "set -euo pipefail; export DEBIAN_FRONTEND=noninteractive PIP_ROOT_USER_ACTION=ignore PIP_DISABLE_PIP_VERSION_CHECK=1 FORCE_COLOR=1 COVERAGE_FILE='$CONTAINER_COVERAGE_FILE'; mkdir -p '.tests/python/coverage' '.tests/python/reports'; if ! command -v python3 >/dev/null 2>&1; then ln -sf /usr/local/bin/python /usr/local/bin/python3; fi; if ! command -v git >/dev/null 2>&1; then apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq --no-install-recommends git >/dev/null 2>&1; fi; python -m pip install --quiet --upgrade pip; if [[ -n '$requirements_file' && -f '$requirements_file' ]]; then python -m pip install --quiet -r '$requirements_file'; fi; python -m pip install --quiet $CONTAINER_DEPS; $command"
+    bash -lc "set -euo pipefail; export DEBIAN_FRONTEND=noninteractive PIP_ROOT_USER_ACTION=ignore PIP_DISABLE_PIP_VERSION_CHECK=1 FORCE_COLOR=1 COVERAGE_FILE='$CONTAINER_COVERAGE_FILE'; mkdir -p '.tests/python/coverage' '.tests/python/reports'; if ! command -v python3 >/dev/null 2>&1; then ln -sf /usr/local/bin/python /usr/local/bin/python3; fi; if ! command -v git >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update -qq >/dev/null 2>&1 || true; apt-get install -y -qq --no-install-recommends git >/dev/null 2>&1 || true; fi; fi; python -m pip install --quiet --upgrade pip; if [[ -n '$requirements_file' && -f '$requirements_file' ]]; then python -m pip install --quiet -r '$requirements_file'; fi; python -m pip install --quiet $CONTAINER_DEPS; $command"
 }
 
 declare -a STAGE_NAMES=()

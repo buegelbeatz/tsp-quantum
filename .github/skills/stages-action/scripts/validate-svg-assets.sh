@@ -29,6 +29,26 @@ svg_dirs=(
   "$REPO_ROOT/docs/images/mermaid"
 )
 
+_normalize_svg_text_nodes() {
+  local svg_file="$1"
+  "$PYTHON_BIN" - "$svg_file" <<'PY' >/dev/null 2>&1
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+original = text
+
+# Escape bare comparison operators inside text nodes without touching tags.
+text = re.sub(r'>([^<]*?)>=([^<]*?)<', r'>\1&amp;gt;=\2<', text)
+text = re.sub(r'>([^<]*?)<=([^<]*?)<', r'>\1&amp;lt;=\2<', text)
+
+if text != original:
+    path.write_text(text, encoding="utf-8")
+PY
+}
+
 total_count=0
 invalid_count=0
 valid_lines=""
@@ -41,6 +61,7 @@ for svg_dir in "${svg_dirs[@]}"; do
     total_count=$((total_count + 1))
 
     rel_path="${svg_file#"$REPO_ROOT"/}"
+    _normalize_svg_text_nodes "$svg_file"
     if "$PYTHON_BIN" - "$svg_file" <<'PY' >/dev/null 2>&1
 import sys
 import xml.etree.ElementTree as ET

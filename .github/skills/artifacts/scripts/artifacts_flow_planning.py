@@ -797,6 +797,8 @@ def _skill_instruction_requirements(
     if has_notebook:
         lines.extend(
             [
+                "- .github/instructions/data-scientist/jupyter.instructions.md",
+                "- .github/instructions/quantum-expert/jupyter-quantum.instructions.md",
                 "- Notebook execution contract:",
                 "  - Notebook cells must orchestrate experiments, explain methodology, and render decision-ready visuals.",
                 "  - Reusable business logic must remain in src/ modules and be imported by notebook cells.",
@@ -806,6 +808,7 @@ def _skill_instruction_requirements(
     if has_quantum:
         lines.extend(
             [
+                "- .github/instructions/quantum-expert/quantum-computing.instructions.md",
                 "- Quantum analysis contract:",
                 "  - Define a classical baseline metric (for example tour length, runtime, approximation quality).",
                 "  - Compare at least one quantum-oriented approach against one classical heuristic using the same dataset.",
@@ -2185,6 +2188,10 @@ def _block_unspecified_bug_ticket(
     if not bug_ticket_id:
         return "bug-ticket-skip:no-id"
 
+    is_git_repo, _ = _run_command(["git", "rev-parse", "--is-inside-work-tree"], repo_root)
+    if not is_git_repo:
+        return f"bug-ticket-skip:board-unavailable:{bug_ticket_id}"
+
     ticket_ref = _board_ticket_ref(repo_root, bug_ticket_id)
     if not ticket_ref:
         return f"bug-ticket-skip:not-present:{bug_ticket_id}"
@@ -2239,11 +2246,26 @@ def _ensure_local_board_seed(
     classification: str,
 ) -> tuple[str, list[str], list[str]]:
     """Seed local refs/board tickets when GitHub project sync is unavailable."""
+    available_ticket_kinds = set(planning_paths.keys())
+    available_ticket_kinds.add("task")
+    details: list[str] = []
+
+    if "bug" not in planning_paths:
+        bug_gate_status = _block_unspecified_bug_ticket(
+            repo_root,
+            board_name,
+            stage,
+            bundle.item_code,
+        )
+        details.append(bug_gate_status)
+        if not bug_gate_status.startswith("bug-ticket-skip:not-present:"):
+            available_ticket_kinds.add("bug")
+
     ticket_specs = _planning_ticket_specs(
         stage,
         bundle.item_code,
         classification,
-        set(planning_paths.keys()),
+        available_ticket_kinds,
     )
     sprint_id = _default_stage_sprint_id(stage)
     sprint_goal = f"Stage {stage.title()} planning execution for bundle group {bundle.item_code}"
@@ -2261,18 +2283,7 @@ def _ensure_local_board_seed(
         if assignee_match and assignee_match.group("value").strip():
             assigned_role = assignee_match.group("value").strip()
             break
-    details: list[str] = []
     created_ids: list[str] = []
-
-    if "bug" not in planning_paths:
-        details.append(
-            _block_unspecified_bug_ticket(
-                repo_root,
-                board_name,
-                stage,
-                bundle.item_code,
-            )
-        )
 
     def _normalize_localized_ticket_line(line: str) -> str:
         """Normalize known localized fragments into deterministic English text."""

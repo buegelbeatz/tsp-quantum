@@ -42,6 +42,7 @@ board_run_gh() {
     GH_TOKEN="${GH_TOKEN:-}" GITHUB_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}" bash "$RUN_TOOL_SH" gh "$@"
     return $?
   fi
+  command -v gh >/dev/null 2>&1 && command gh "$@" && return $?
   return 127
 }
 
@@ -62,6 +63,7 @@ board_run_python() {
 }
 
 board_can_use_github() {
+  declare -F github_run_gh >/dev/null 2>&1 || [[ -x "$RUN_TOOL_SH" || -f "$RUN_TOOL_SH" ]] || { command -v gh >/dev/null 2>&1; return $?; }
   if declare -F github_require_token >/dev/null 2>&1; then
     github_require_token || true
   fi
@@ -213,7 +215,6 @@ find_milestone_number() {
 
 sync_milestone_on_create() {
   [[ "${BOARD_SYNC_MILESTONES:-1}" == "1" ]] || return 0
-  board_can_use_github || { warn "Skipping milestone sync (GitHub runtime/auth unavailable)."; return 0; }
 
   local sprint_id="$1"
   local goal="$2"
@@ -237,7 +238,6 @@ sync_milestone_on_create() {
 
 sync_milestone_on_close() {
   [[ "${BOARD_SYNC_MILESTONES:-1}" == "1" ]] || return 0
-  board_can_use_github || { warn "Skipping milestone sync (GitHub runtime/auth unavailable)."; return 0; }
 
   local sprint_id="$1"
   local repo_slug
@@ -655,7 +655,7 @@ cmd_move() {
     git -C "$REPO_ROOT" push "$REMOTE" ":${from_ref}" 2>/dev/null || true
   fi
 
-  sync_issue_status_for_ticket "$id" "$to_col"
+  sync_issue_status_for_ticket "$id" "$to_col" || true
 }
 
 cmd_checkout() {
@@ -691,7 +691,7 @@ cmd_checkout() {
     git -C "$REPO_ROOT" push "$REMOTE" ":${REF_PREFIX}/backlog/${id}" 2>/dev/null || true
   fi
 
-  sync_issue_status_for_ticket "$id" "in-progress"
+  sync_issue_status_for_ticket "$id" "in-progress" || true
 }
 
 cmd_list() {

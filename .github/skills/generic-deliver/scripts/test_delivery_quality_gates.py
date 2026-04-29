@@ -21,7 +21,8 @@ def temp_repo():
     """Create temporary repository structure."""
     with TemporaryDirectory() as tmpdir:
         repo_root = Path(tmpdir)
-        (repo_root / ".digital-artifacts" / "60-review" / "2026-04-27" / "project").mkdir(
+        today = datetime.now().strftime("%Y-%m-%d")
+        (repo_root / ".digital-artifacts" / "60-review" / today / "project").mkdir(
             parents=True
         )
         (repo_root / ".digital-runtime" / "handoffs" / "project").mkdir(parents=True)

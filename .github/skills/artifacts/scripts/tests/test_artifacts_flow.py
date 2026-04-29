@@ -603,6 +603,32 @@ def test_specification_to_stage_blocks_failed_language_gate(tmp_path: Path) -> N
     assert "language gate failed for canonical specification content" in stage_text
 
 
+def test_specification_to_stage_allows_empty_repo_as_noop_ready(tmp_path: Path) -> None:
+    """An empty repository should not block the stage gate when there is nothing to plan."""
+    repo_root = tmp_path
+
+    template_root = (
+        repo_root
+        / ".github"
+        / "skills"
+        / "artifacts"
+        / "templates"
+        / "digital-artifacts"
+    )
+    _write(template_root / "40-stage" / "INVENTORY.template.md", "# INVENTORY\n")
+
+    result = artifacts_flow.run_specification_to_stage(repo_root, "project")
+
+    stage_path = repo_root / ".digital-artifacts" / "40-stage" / "PROJECT.md"
+    stage_text = stage_path.read_text(encoding="utf-8")
+    assert result["ready"] == 0
+    assert result["skipped"] == 0
+    assert "ready_for_planning: true" in stage_text
+    assert 'gate_reason: "stage has no specification bundles to plan"' in stage_text
+    assert "selected_bundle_count: 0" in stage_text
+    assert "blocked_bundle_count: 0" in stage_text
+
+
 def test_specification_to_planning_requires_existing_stage_doc(
     tmp_path: Path, monkeypatch
 ) -> None:

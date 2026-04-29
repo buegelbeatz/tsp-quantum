@@ -105,7 +105,8 @@ run_local_e2e() {
     --dry-run 0 \
     --confirm 1 \
     --github 0 \
-    --remote 0
+    --remote 0 \
+    --local-e2e
 
   assert_local_cleanup_result "$clone_root"
   log_info "cleanup-e2e: local temp clone validation passed"

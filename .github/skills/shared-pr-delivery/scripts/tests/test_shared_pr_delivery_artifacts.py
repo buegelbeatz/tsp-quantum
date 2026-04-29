@@ -2,8 +2,6 @@
 # This module tests the shared-pr-delivery skill integration
 
 import pytest
-import tempfile
-import os
 from pathlib import Path
 
 
